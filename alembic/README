@@ -1,0 +1,4 @@
+Alembic 目录用于存放数据库迁移配置和脚本。
+- env.py: 迁移环境配置，已集成 .env 动态数据库连接
+- versions/: 存放所有迁移历史脚本
+- script.py.mako: 迁移脚本模板 
