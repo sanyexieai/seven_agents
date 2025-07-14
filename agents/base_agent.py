@@ -161,7 +161,6 @@ class BaseAgent(ABC):
     def _setup_tools(self) -> List[BaseTool]:
         """设置工具列表"""
         tools = []
-        
         # 添加默认工具
         default_tools = self.extra_config.get('tools', [])
         for tool_config in default_tools:
@@ -227,31 +226,26 @@ class BaseAgent(ABC):
         
         return APITool()
     
+    def _load_base_prompt(self, prompt_name):
+        import os
+        prompt_path = os.path.join(os.path.dirname(__file__), 'prompt', 'base_agent', f'{prompt_name}.txt')
+        with open(prompt_path, 'r', encoding='utf-8') as f:
+            return f.read()
+
     def _setup_prompt(self) -> ChatPromptTemplate:
         """设置提示词模板"""
-        # 默认系统提示词
-        system_template = self.extra_config.get(
-            'system_prompt',
-            f"""你是一个名为 {self.name} 的智能体。
-
-你的职责是:
-- 理解用户需求
-- 使用可用工具完成任务
-- 提供准确有用的回答
-- 保持对话的连贯性
-
-可用工具: {{tools}}
-
-对话历史: {{chat_history}}
-
-请根据用户输入提供帮助。"""
+        # 加载系统提示词模板
+        system_template = self._load_base_prompt('system')
+        # 格式化模板内容
+        system_prompt = system_template.format(
+            agent_name=self.name,
+            tools="{tools}",
+            chat_history="{chat_history}"
         )
-        
         prompt = ChatPromptTemplate.from_messages([
-            ("system", system_template),
+            ("system", system_prompt),
             ("human", "{input}")
         ])
-        
         self.logger.info("提示词模板设置完成")
         return prompt
     

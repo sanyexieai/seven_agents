@@ -9,7 +9,7 @@ class GoogleNewsSearchTool(MCPTool):
     def __init__(self):
         super().__init__(
             name="google_news_search",
-            description="Google新闻搜索，支持关键词、时间范围等参数。"
+            description="Google新闻搜索，支持关键词、时间范围(可选)等参数。"
         )
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
