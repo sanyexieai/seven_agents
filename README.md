@@ -1,216 +1,120 @@
 # Seven Agents - 多智能体系统
 
-基于LangChain的多智能体示例项目，集成MCP、A2A、工具调用、RAG等技术。
+基于LangChain的多智能体企业级应用示例，集成MCP、RAG、自动调度、工具链、向量数据库等最佳实践。
 
 ## 项目概述
 
-本项目实现了七个专业智能体，每个智能体都有特定的职责：
+本项目实现了多智能体协作框架，支持：
+- 智能体注册与自动发现
+- 智能体调度与自动调用
+- MCP工具链配置化/自动化集成
+- RAG数据库化与向量存储
+- 多场景提示词模板管理
+- LLM驱动参数补全与工具自动调用
 
-1. **协调者智能体** (Coordinator Agent) - 负责整体任务协调和分配
-2. **研究智能体** (Research Agent) - 负责信息检索和RAG操作
-3. **分析智能体** (Analysis Agent) - 负责数据分析和处理
-4. **工具智能体** (Tool Agent) - 负责工具调用和MCP集成
-5. **通信智能体** (Communication Agent) - 负责A2A通信协议
-6. **执行智能体** (Execution Agent) - 负责具体任务执行
-7. **监控智能体** (Monitor Agent) - 负责系统监控和日志
+### 典型智能体角色
+
+1. **调度智能体 (AgentCoordinatorAgent)** - 负责全局智能体发现、选择与自动分配/调用
+2. **工具智能体 (ToolAgent)** - 自动选择并调用MCP工具，支持schema驱动参数补全
+3. **基础智能体 (BaseAgent)** - 支持LLM、记忆、工具链、提示词等通用能力
+4. 其它可扩展智能体（如分析、研究、通信、执行、监控等）
 
 ## 技术特性
 
-- **MCP (Model Context Protocol)**: 模型上下文协议，支持工具调用
-- **A2A (Agent-to-Agent)**: 智能体间通信协议
-- **RAG (Retrieval-Augmented Generation)**: 检索增强生成
-- **向量数据库**: 知识存储和检索
-- **异步处理**: 支持并发任务执行
-- **可扩展架构**: 模块化设计，易于扩展
+- **MCP (Model Context Protocol)**: 工具链能力即配置，支持本地/远程工具热插拔
+- **RAG数据库化**: pgvector向量存储，ORM自动建表，embedding可配置
+- **多智能体注册/调度**: 统一注册表，自动发现、分配、调用
+- **多场景提示词模板**: 每个智能体/场景独立模板，支持多文件结构
+- **LLM参数补全**: schema驱动+LLM自动补全+自动调用闭环
+- **配置化/自动化**: 所有能力均支持json配置和自动注册，无需硬编码
 
 ## 项目结构
 seven_agents/
-├── README.md # 项目说明
-├── requirements.txt # 依赖包
-├── main.py # 主入口文件
-├── config/ # 配置文件
-│ ├── __init__.py
-│ ├── settings.py # 全局设置
-│ └── agents_config.py # 智能体配置
-├── models/ # 数据模型
-│ ├── __init__.py
-│ └── agent_model.py # 智能体数据模型
-├── database/ # 数据库相关
-│ ├── __init__.py
-│ ├── db_sync.py # 数据库同步
-│ └── agent_loader.py # 智能体数据加载
-├── agents/ # 智能体模块
-│ ├── __init__.py
-│ ├── base_agent.py # 基础智能体类
-│ ├── coordinator_agent.py # 协调者智能体
-│ ├── research_agent.py # 研究智能体
-│ ├── analysis_agent.py # 分析智能体
-│ ├── tool_agent.py # 工具智能体
-│ ├── communication_agent.py # 通信智能体
-│ ├── execution_agent.py # 执行智能体
-│ ├── monitor_agent.py # 监控智能体
-│ └── orchestrator.py # 智能体编排器
-├── tools/ # 工具模块
-│ ├── __init__.py
-│ ├── mcp_tools.py # MCP工具
-│ ├── rag_tools.py # RAG工具
-│ └── utility_tools.py # 通用工具
-├── memory/ # 记忆模块
-│ ├── __init__.py
-│ ├── conversation_memory.py # 对话记忆
-│ └── vector_store.py # 向量存储
-├── communication/ # 通信模块
-│ ├── __init__.py
-│ ├── a2a_protocol.py # A2A协议
-│ └── message_bus.py # 消息总线
-├── examples/ # 示例代码
-│ ├── __init__.py
-│ ├── basic_example.py # 基础示例
-│ ├── rag_example.py # RAG示例
-│ └── tool_calling_example.py # 工具调用示例
-├── data/ # 数据目录
-│ ├── documents/ # 文档存储
-│ └── vector_db/ # 向量数据库
-└── logs/ # 日志目录
+├── README.md
+├── requirements.txt
+├── main.py
+├── config/
+│   ├── settings.py
+│   └── ...
+├── agents/
+│   ├── base_agent.py         # 基础智能体类（自动注册）
+│   ├── tool_agent.py         # 工具智能体（自动注册）
+│   ├── agent_coordinator.py  # 调度智能体（自动注册）
+│   ├── utils/
+│   │   ├── register.py       # 智能体注册/发现机制
+│   │   └── ...
+│   └── prompt/
+│       ├── base_agent/
+│       │   └── system.txt
+│       ├── tool_agent/
+│       │   └── tool_select.txt
+│       └── agent_coordinator/
+│           ├── agent_list.txt
+│           └── agent_select.txt
+├── tools/
+│   ├── mcp_tools.py
+│   └── mcp/
+│       ├── base.py
+│       ├── api_call.py
+│       ├── file_operation.py
+│       └── google_news_search.py
+├── database/
+│   └── ...
+├── examples/
+│   ├── agent_coordinator_example.py # 调度智能体自动分配/调用示例
+│   └── ...
+└── ...
 
-## 安装和设置
+## 快速开始
 
 ### 1. 安装依赖
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. 环境配置
-创建 `.env` 文件：
-```env
-# 环境配置
-ENVIRONMENT=development  # development, production, testing
-DATABASE_SYNC_MODE=auto  # auto, alembic, none
+### 2. 配置环境变量
+详见 `.env` 示例。
 
-# 数据库配置
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_DB=seven_agents
-POSTGRES_USER=your_username
-POSTGRES_PASSWORD=your_password
-POSTGRES_SSLMODE=prefer
-
-# AI配置
-OPENAI_API_KEY=your_openai_api_key
-OPENAI_BASE_URL=https://api.openai.com/v1
-
-# 其他配置
-VECTOR_DB_PATH=./data/vector_db
-LOG_LEVEL=INFO
-```
-
-#### 环境变量说明：
-- **ENVIRONMENT**: 运行环境
-  - `development`: 开发环境，使用SQLAlchemy自动同步 + Alembic备份
-  - `production`: 生产环境，只使用Alembic迁移
-  - `testing`: 测试环境
-- **DATABASE_SYNC_MODE**: 数据库同步模式
-  - `auto`: 自动选择（开发环境用SQLAlchemy，生产环境用Alembic）
-  - `alembic`: 强制使用Alembic迁移
-  - `none`: 跳过数据库同步
-
-### 3. 运行项目
-
-#### 推荐方式（使用.env文件）
+### 3. 运行多智能体调度示例
 ```bash
-# 在.env文件中设置环境变量后直接运行
-python main.py
+python examples/agent_coordinator_example.py
 ```
 
-#### 命令行设置环境变量
+## 多智能体注册与自动调度
 
-**Windows PowerShell:**
-```powershell
-# 开发环境
-$env:ENVIRONMENT="development"; python main.py
+- 所有智能体类用 `@register_agent` 装饰器自动注册到全局注册表
+- 调度智能体可自动发现所有已注册智能体及其描述
+- 支持 LLM 自动选择/分配/参数补全/自动调用目标智能体
+- 支持多场景提示词模板，结构清晰、易扩展
 
-# 生产环境
-$env:ENVIRONMENT="production"; python main.py
+## MCP工具链与RAG数据库化
 
-# 测试环境
-$env:ENVIRONMENT="testing"; python main.py
-```
+- 所有MCP工具通过json配置自动注册，支持本地/远程/热插拔
+- 工具schema/描述自动获取，LLM可智能参数补全
+- RAG相关表自动建表，pgvector向量存储，embedding可配置
 
-**Windows CMD:**
-```cmd
-# 开发环境
-set ENVIRONMENT=development && python main.py
+## 提示词模板管理
 
-# 生产环境
-set ENVIRONMENT=production && python main.py
+- 每个智能体/场景独立模板，存放于 `agents/prompt/智能体名/模板名.txt`
+- 支持多场景、多轮对话、多任务提示词灵活扩展
 
-# 测试环境
-set ENVIRONMENT=testing && python main.py
-```
+## 典型用法
 
-**Linux/Mac:**
-```bash
-# 开发环境
-ENVIRONMENT=development python main.py
-
-# 生产环境
-ENVIRONMENT=production python main.py
-
-# 测试环境
-ENVIRONMENT=testing python main.py
-```
-
-## 使用示例
-
-### 基础使用
+### 1. 注册与调度
 ```python
-from agents import AgentOrchestrator
-
-# 创建智能体编排器
-orchestrator = AgentOrchestrator()
-
-# 执行任务
-result = orchestrator.execute_task("分析最新的AI技术趋势")
+from agents.agent_coordinator import AgentCoordinatorAgent
+coordinator = AgentCoordinatorAgent(name="调度智能体")
+result = coordinator.select_and_call_agent("以商汤科技为关键词，搜索相关新闻")
 print(result)
 ```
 
-## 智能体详细说明
-
-### 1. 协调者智能体
-- **职责**: 任务分解、智能体选择、结果整合
-- **工具**: 任务分解器、智能体选择器
-- **特点**: 全局视角，决策能力强
-
-### 2. 研究智能体
-- **职责**: 信息检索、文档处理、知识库构建
-- **工具**: 网络搜索、文档加载器、向量搜索
-- **特点**: 信息收集专家，RAG核心
-
-### 3. 分析智能体
-- **职责**: 数据分析、模式识别、洞察生成
-- **工具**: 数据分析器、图表生成器、统计工具
-- **特点**: 数据处理能力强，洞察深刻
-
-### 4. 工具智能体
-- **职责**: 工具调用、MCP集成、外部API交互
-- **工具**: MCP客户端、API调用器、工具管理器
-- **特点**: 工具集成专家，扩展性强
-
-### 5. 通信智能体
-- **职责**: 智能体间通信、消息路由、协议管理
-- **工具**: 消息总线、协议处理器、状态同步器
-- **特点**: 通信协议专家，协调能力强
-
-### 6. 执行智能体
-- **职责**: 任务执行、结果验证、错误处理
-- **工具**: 任务执行器、结果验证器、错误处理器
-- **特点**: 执行效率高，可靠性强
-
-### 7. 监控智能体
-- **职责**: 系统监控、性能分析、日志管理
-- **工具**: 监控器、性能分析器、日志管理器
-- **特点**: 系统监控专家，问题诊断能力强
+### 2. 工具智能体自动参数补全与调用
+```python
+from agents.tool_agent import ToolAgent
+agent = ToolAgent(name="工具智能体")
+result = agent.select_and_call_tool("以商汤科技为关键词，搜索相关新闻")
+print(result)
+```
 
 ## 许可证
-
 MIT License
