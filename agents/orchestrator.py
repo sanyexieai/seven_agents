@@ -1,4 +1,4 @@
-from agents.agent_loader import load_agents_from_db
+from database.agent_loader import load_agents_from_db
 
 class AgentOrchestrator:
     """

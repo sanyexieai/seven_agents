@@ -29,11 +29,18 @@ seven_agents/
 ├── requirements.txt # 依赖包
 ├── main.py # 主入口文件
 ├── config/ # 配置文件
-│ ├── init.py
+│ ├── __init__.py
 │ ├── settings.py # 全局设置
 │ └── agents_config.py # 智能体配置
+├── models/ # 数据模型
+│ ├── __init__.py
+│ └── agent_model.py # 智能体数据模型
+├── database/ # 数据库相关
+│ ├── __init__.py
+│ ├── db_sync.py # 数据库同步
+│ └── agent_loader.py # 智能体数据加载
 ├── agents/ # 智能体模块
-│ ├── init.py
+│ ├── __init__.py
 │ ├── base_agent.py # 基础智能体类
 │ ├── coordinator_agent.py # 协调者智能体
 │ ├── research_agent.py # 研究智能体
@@ -41,22 +48,23 @@ seven_agents/
 │ ├── tool_agent.py # 工具智能体
 │ ├── communication_agent.py # 通信智能体
 │ ├── execution_agent.py # 执行智能体
-│ └── monitor_agent.py # 监控智能体
+│ ├── monitor_agent.py # 监控智能体
+│ └── orchestrator.py # 智能体编排器
 ├── tools/ # 工具模块
-│ ├── init.py
+│ ├── __init__.py
 │ ├── mcp_tools.py # MCP工具
 │ ├── rag_tools.py # RAG工具
 │ └── utility_tools.py # 通用工具
 ├── memory/ # 记忆模块
-│ ├── init.py
+│ ├── __init__.py
 │ ├── conversation_memory.py # 对话记忆
 │ └── vector_store.py # 向量存储
 ├── communication/ # 通信模块
-│ ├── init.py
+│ ├── __init__.py
 │ ├── a2a_protocol.py # A2A协议
 │ └── message_bus.py # 消息总线
 ├── examples/ # 示例代码
-│ ├── init.py
+│ ├── __init__.py
 │ ├── basic_example.py # 基础示例
 │ ├── rag_example.py # RAG示例
 │ └── tool_calling_example.py # 工具调用示例
@@ -75,15 +83,81 @@ pip install -r requirements.txt
 ### 2. 环境配置
 创建 `.env` 文件：
 ```env
+# 环境配置
+ENVIRONMENT=development  # development, production, testing
+DATABASE_SYNC_MODE=auto  # auto, alembic, none
+
+# 数据库配置
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=seven_agents
+POSTGRES_USER=your_username
+POSTGRES_PASSWORD=your_password
+POSTGRES_SSLMODE=prefer
+
+# AI配置
 OPENAI_API_KEY=your_openai_api_key
 OPENAI_BASE_URL=https://api.openai.com/v1
+
+# 其他配置
 VECTOR_DB_PATH=./data/vector_db
 LOG_LEVEL=INFO
 ```
 
+#### 环境变量说明：
+- **ENVIRONMENT**: 运行环境
+  - `development`: 开发环境，使用SQLAlchemy自动同步 + Alembic备份
+  - `production`: 生产环境，只使用Alembic迁移
+  - `testing`: 测试环境
+- **DATABASE_SYNC_MODE**: 数据库同步模式
+  - `auto`: 自动选择（开发环境用SQLAlchemy，生产环境用Alembic）
+  - `alembic`: 强制使用Alembic迁移
+  - `none`: 跳过数据库同步
+
 ### 3. 运行项目
+
+#### 推荐方式（使用.env文件）
 ```bash
+# 在.env文件中设置环境变量后直接运行
 python main.py
+```
+
+#### 命令行设置环境变量
+
+**Windows PowerShell:**
+```powershell
+# 开发环境
+$env:ENVIRONMENT="development"; python main.py
+
+# 生产环境
+$env:ENVIRONMENT="production"; python main.py
+
+# 测试环境
+$env:ENVIRONMENT="testing"; python main.py
+```
+
+**Windows CMD:**
+```cmd
+# 开发环境
+set ENVIRONMENT=development && python main.py
+
+# 生产环境
+set ENVIRONMENT=production && python main.py
+
+# 测试环境
+set ENVIRONMENT=testing && python main.py
+```
+
+**Linux/Mac:**
+```bash
+# 开发环境
+ENVIRONMENT=development python main.py
+
+# 生产环境
+ENVIRONMENT=production python main.py
+
+# 测试环境
+ENVIRONMENT=testing python main.py
 ```
 
 ## 使用示例

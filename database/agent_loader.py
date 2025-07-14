@@ -1,7 +1,7 @@
 import json
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-from .agent_model import AgentModel, Base
+from models.agent_model import AgentModel, Base
 from agents import (
     CoordinatorAgent, ResearchAgent, AnalysisAgent,
     ToolAgent, CommunicationAgent, ExecutionAgent, MonitorAgent
@@ -24,8 +24,21 @@ engine = create_engine(SQLALCHEMY_DATABASE_URL, echo=False)
 SessionLocal = sessionmaker(bind=engine)
 
 def init_db():
-    """创建表结构（如未存在）。"""
+    """创建表结构并自动同步数据库（如未存在）。"""
+    # 检查key字段是否存在
+    inspector = engine.dialect.inspector(engine)
+    if 'agents' in inspector.get_table_names():
+        columns = [col['name'] for col in inspector.get_columns('agents')]
+        if 'key' not in columns:
+            # 如果key字段不存在，添加它
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE agents ADD COLUMN key VARCHAR(64) UNIQUE NOT NULL DEFAULT 'default_key'"))
+                conn.commit()
+                print("已添加key字段到agents表")
+    
+    # 创建所有表（如果不存在）
     Base.metadata.create_all(engine)
+    print("数据库结构已同步")
 
 def load_agents_from_db():
     """从数据库加载所有启用的智能体实例。"""
@@ -40,4 +53,4 @@ def load_agents_from_db():
                 agents.append(agent)
     finally:
         session.close()
-    return agents 
+    return agents

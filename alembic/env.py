@@ -9,7 +9,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'seven_agents')))
 
 from config.settings import SQLALCHEMY_DATABASE_URL
-from agents.agent_model import Base
+from models.agent_model import Base
 
 # Alembic Config 对象
 config = context.config
