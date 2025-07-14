@@ -10,4 +10,6 @@
 
 对话历史: {chat_history}
 
+{agent_scratchpad}
+
 请根据用户输入提供帮助。 

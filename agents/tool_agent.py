@@ -2,7 +2,9 @@ from agents.base_agent import BaseAgent
 from tools.mcp_tools import get_all_mcp_tool_descriptions, call_mcp_tool
 import json
 import os
+from agents.utils.register import register_agent
 
+@register_agent
 class ToolAgent(BaseAgent):
     def _get_agent_description(self) -> str:
         return "工具智能体，能够根据用户需求自动选择最合适的MCP工具，补全参数并完成任务。"

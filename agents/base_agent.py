@@ -24,7 +24,6 @@ from langchain.schema.runnable import RunnablePassthrough
 from config.settings import get_settings
 from tools.mcp_tools import get_all_mcp_tools, get_all_mcp_tool_descriptions, call_mcp_tool
 
-
 class BaseAgent(ABC):
     """
     基于LangChain的智能体基类
@@ -161,6 +160,7 @@ class BaseAgent(ABC):
     def _setup_tools(self) -> List[BaseTool]:
         """设置工具列表"""
         tools = []
+        function_tools = []
         # 添加默认工具
         default_tools = self.extra_config.get('tools', [])
         for tool_config in default_tools:
@@ -168,9 +168,11 @@ class BaseAgent(ABC):
                 tool = self._create_tool(tool_config)
                 if tool:
                     tools.append(tool)
+                    # 判断是否为function tool（用@tool装饰的）
+                    if hasattr(tool, "args") and hasattr(tool, "__call__"):
+                        function_tools.append(tool)
             except Exception as e:
                 self.logger.error(f"工具创建失败 {tool_config}: {e}")
-        
         # 自动加载 MCP 工具
         try:
             mcp_tools = get_all_mcp_tools()
@@ -178,6 +180,7 @@ class BaseAgent(ABC):
             self.logger.info(f"工具初始化完成: {len(tools)} 个工具（含MCP）")
         except Exception as e:
             self.logger.error(f"MCP工具加载失败: {e}")
+        self._function_tools = function_tools
         return tools
 
     def get_all_tool_schemas(self):
@@ -240,7 +243,8 @@ class BaseAgent(ABC):
         system_prompt = system_template.format(
             agent_name=self.name,
             tools="{tools}",
-            chat_history="{chat_history}"
+            chat_history="{chat_history}",
+            agent_scratchpad="{agent_scratchpad}"
         )
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_prompt),
@@ -263,31 +267,28 @@ class BaseAgent(ABC):
     
     def _setup_agent(self) -> Optional[AgentExecutor]:
         """设置智能体执行器"""
-        if not self.tools:
-            self.logger.info("没有可用工具，跳过智能体设置")
-            return None
-        
-        try:
-            # 创建函数调用智能体
-            agent = create_openai_functions_agent(
-                llm=self.llm,
-                tools=self.tools,
-                prompt=self.prompt
-            )
-            
-            agent_executor = AgentExecutor(
-                agent=agent,
-                tools=self.tools,
-                memory=self.memory,
-                verbose=self.extra_config.get('verbose', False),
-                handle_parsing_errors=True
-            )
-            
-            self.logger.info("智能体执行器设置完成")
-            return agent_executor
-            
-        except Exception as e:
-            self.logger.error(f"智能体设置失败: {e}")
+        # 只用function tool时才用function agent，否则不用
+        if hasattr(self, '_function_tools') and self._function_tools:
+            try:
+                agent = create_openai_functions_agent(
+                    llm=self.llm,
+                    tools=self._function_tools,
+                    prompt=self.prompt
+                )
+                agent_executor = AgentExecutor(
+                    agent=agent,
+                    tools=self._function_tools,
+                    memory=self.memory,
+                    verbose=self.extra_config.get('verbose', False),
+                    handle_parsing_errors=True
+                )
+                self.logger.info("智能体执行器设置完成 (function agent)")
+                return agent_executor
+            except Exception as e:
+                self.logger.error(f"智能体设置失败: {e}")
+                return None
+        else:
+            self.logger.info("没有可用function工具，跳过function agent设置，仅支持chain调用")
             return None
     
     def run(self, task: str, **kwargs) -> str:
