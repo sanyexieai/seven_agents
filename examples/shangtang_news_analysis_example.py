@@ -19,7 +19,7 @@ from typing import Dict, List, Any, Optional
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from agents.base_agent import BaseAgent
-from tools.mcp import WebSearchTool, FileOperationTool
+from tools.mcp import  FileOperationTool
 from tools.rag_tools import RAGTool, Document
 from tools.utility_tools import data_processor, file_utils, time_utils
 from tools.mcp_tools import mcp_tool_manager
@@ -64,7 +64,6 @@ class NewsCollectorAgent(BaseAgent):
         super().__init__(name, **collector_config)
         
         # 初始化工具
-        self.web_search_tool = WebSearchTool()
         self.file_tool = FileOperationTool()
         self.rag_tool = RAGTool()
         
@@ -86,8 +85,8 @@ class NewsCollectorAgent(BaseAgent):
         return [
             {
                 'type': 'function',
-                'name': 'web_search',
-                'description': '网络搜索工具'
+                'name': 'google_news_search',
+                'description': '谷歌新闻搜索工具'
             },
             {
                 'type': 'function', 
@@ -111,34 +110,27 @@ class NewsCollectorAgent(BaseAgent):
         all_news = []
         collected_count = 0
         
+        # schema驱动MCP调用示例
         for keyword in self.search_keywords:
             try:
                 self.logger.info(f"搜索关键词: {keyword}")
-                
-                # 替换原有的self.web_search_tool.execute调用为标准MCP调用
-                search_result = mcp_tool_manager.execute_tool(
-                    "web_search",
-                    {
-                        "query": keyword,
-                        "max_results": max_results_per_keyword,
-                        "search_engine": "google",
-                        "search_type": "news",
-                        "start_date": (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d"),
-                        "end_date": datetime.now().strftime("%Y-%m-%d")
-                    }
-                )
-                
+                # 1. 获取工具schema
+                tool = mcp_tool_manager.get_tool("google_news_search")
+                schema = tool.get_parameters()
+                # 2. 自动参数推理（此处简单填充，实际可用LLM/上下文补全）
+                params = {"query": keyword, "max_results": max_results_per_keyword,
+                          "start_date": (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d"),
+                          "end_date": datetime.now().strftime("%Y-%m-%d")}
+                # 3. schema校验/补全（可选）
+                # 4. 调用MCP工具
+                search_result = mcp_tool_manager.execute_tool("google_news_search", params)
                 if search_result.get('results'):
                     for result in search_result['results']:
-                        # 清理和预处理新闻数据
                         cleaned_news = self._clean_news_data(result, keyword)
                         if cleaned_news:
                             all_news.append(cleaned_news)
                             collected_count += 1
-                
-                # 避免请求过于频繁
                 await asyncio.sleep(2)
-                
             except Exception as e:
                 self.logger.error(f"搜索关键词 '{keyword}' 失败: {e}")
                 continue

@@ -10,20 +10,21 @@ from .mcp import (
     MCPTool,
     MCPClient,
     MCPToolManager,
-    WebSearchTool,
     FileOperationTool,
     APICallTool,
 )
+from .mcp.google_news_search import GoogleNewsSearchTool
 
 # 创建默认的MCP工具管理器实例
 mcp_tool_manager = MCPToolManager()
+mcp_tool_manager.register_tool(GoogleNewsSearchTool())
 
 __all__ = [
     "MCPTool",
     "MCPClient",
     "MCPToolManager", 
-    "WebSearchTool",
     "FileOperationTool",
     "APICallTool",
+    "GoogleNewsSearchTool",
     "mcp_tool_manager"
 ] 

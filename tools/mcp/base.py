@@ -79,11 +79,9 @@ class MCPToolManager:
     
     def _register_default_tools(self):
         """注册默认工具"""
-        from .web_search import WebSearchTool
         from .file_operation import FileOperationTool
         from .api_call import APICallTool
         
-        self.register_tool(WebSearchTool())
         self.register_tool(FileOperationTool())
         self.register_tool(APICallTool())
     

@@ -12,9 +12,9 @@ from datetime import datetime, timedelta
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from tools.mcp import WebSearchTool
 from tools.rag_tools import RAGTool
 from tools.utility_tools import data_processor, file_utils
+from tools.mcp.google_news_search import GoogleNewsSearchTool
 
 
 async def test_google_news_search():
@@ -22,8 +22,7 @@ async def test_google_news_search():
     print("🔍 测试MCP Google News搜索功能")
     print("=" * 60)
     
-    # 创建WebSearchTool实例
-    web_search_tool = WebSearchTool()
+    # 移除WebSearchTool相关导入和实例化，改为google_news_search
     
     # 测试搜索关键词
     test_keywords = [
@@ -39,14 +38,12 @@ async def test_google_news_search():
         print("-" * 40)
         
         try:
-            # 执行Google News搜索
-            search_result = web_search_tool.execute(
+            google_news_tool = GoogleNewsSearchTool()
+            search_result = google_news_tool.execute(
                 query=keyword,
-                max_results=3,  # 每个关键词搜索3条新闻
-                search_engine="google",
-                search_type="news",  # 指定为新闻搜索
-                start_date=(datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d"),
-                end_date=datetime.now().strftime("%Y-%m-%d")
+                max_results=3,
+                # start_date=(datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d"),
+                # end_date=datetime.now().strftime("%Y-%m-%d")
             )
             
             print(f"✅ 搜索完成，找到 {len(search_result.get('results', []))} 条新闻")
