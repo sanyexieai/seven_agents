@@ -2,6 +2,8 @@ from .base_agent import BaseAgent
 from tools.mcp_tools import mcp_tool_manager
 from tools.rag_tools import rag_tool
 from tools.utility_tools import data_processor, file_utils, format_converter, security_utils, validation_utils, time_utils
+from langchain.tools import BaseTool
+from typing import List
 
 class ToolAgent(BaseAgent):
     """
@@ -12,7 +14,33 @@ class ToolAgent(BaseAgent):
     """
     
     def __init__(self, name: str, **kwargs):
-        super().__init__(name, **kwargs)
+        # 配置工具智能体的特定设置
+        tool_config = {
+            'llm': kwargs.get('llm', {'model': 'gpt-3.5-turbo', 'temperature': 0.7}),
+            'memory_type': 'buffer',
+            'verbose': kwargs.get('verbose', True),
+            'system_prompt': """你是一个专业的工具调用智能体。
+
+你的职责是:
+- 理解用户需求并选择合适的工具
+- 执行各种工具操作（搜索、文件处理、API调用等）
+- 提供准确的操作结果和解释
+- 处理工具调用错误并提供解决方案
+
+可用工具包括:
+- MCP工具：网络搜索、文件操作、API调用
+- RAG工具：知识库搜索和问答
+- 数据处理工具：文本清理、格式转换、验证
+- 安全工具：密码哈希、令牌生成
+- 时间工具：时间戳转换、持续时间计算
+
+请根据用户需求选择合适的工具并执行操作。""",
+            'tools': self._get_tool_configs()
+        }
+        
+        super().__init__(name, **tool_config)
+        
+        # 保持原有的工具映射
         self.available_tools = {
             'mcp': mcp_tool_manager,
             'rag': rag_tool,
@@ -157,6 +185,40 @@ class ToolAgent(BaseAgent):
     def _handle_general_task(self, task: str, **kwargs):
         """处理通用任务"""
         return f"[工具] 处理任务: {task} - 这是一个通用的工具调用任务"
+    
+    def _get_tool_configs(self) -> List[dict]:
+        """获取工具配置列表"""
+        return [
+            {
+                "type": "function",
+                "name": "web_search",
+                "description": "网络搜索工具"
+            },
+            {
+                "type": "function", 
+                "name": "file_operation",
+                "description": "文件操作工具"
+            },
+            {
+                "type": "function",
+                "name": "api_call", 
+                "description": "API调用工具"
+            },
+            {
+                "type": "function",
+                "name": "rag_search",
+                "description": "RAG知识库搜索"
+            },
+            {
+                "type": "function",
+                "name": "data_process",
+                "description": "数据处理工具"
+            }
+        ]
+    
+    def _get_agent_description(self) -> str:
+        """获取智能体描述"""
+        return """工具调用智能体，专门负责执行各种工具操作，包括搜索、文件处理、API调用、数据处理等任务。"""
     
     def list_available_tools(self):
         """列出可用工具"""

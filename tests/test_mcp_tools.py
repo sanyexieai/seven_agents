@@ -186,7 +186,7 @@ class TestAPICallTool(unittest.TestCase):
     def setUp(self):
         self.tool = APICallTool()
     
-    @patch('tools.mcp_tools.requests.request')
+    @patch('tools.mcp.api_call.requests.request')
     def test_api_call_success(self, mock_request):
         """测试成功的API调用"""
         # 模拟成功的响应
@@ -205,7 +205,7 @@ class TestAPICallTool(unittest.TestCase):
         self.assertEqual(result["status_code"], 200)
         self.assertEqual(result["data"], {"message": "success"})
     
-    @patch('tools.mcp_tools.requests.request')
+    @patch('tools.mcp.api_call.requests.request')
     def test_api_call_failure(self, mock_request):
         """测试失败的API调用"""
         # 模拟请求异常
@@ -226,7 +226,7 @@ class TestMCPClient(unittest.TestCase):
     def setUp(self):
         self.client = MCPClient("https://api.example.com")
     
-    @patch('tools.mcp_tools.requests.Session.post')
+    @patch('tools.mcp.base.requests.Session.post')
     def test_call_tool_success(self, mock_post):
         """测试成功的工具调用"""
         mock_response = MagicMock()
@@ -237,7 +237,7 @@ class TestMCPClient(unittest.TestCase):
         
         self.assertEqual(result, {"result": "success"})
     
-    @patch('tools.mcp_tools.requests.Session.post')
+    @patch('tools.mcp.base.requests.Session.post')
     def test_call_tool_failure(self, mock_post):
         """测试失败的工具调用"""
         mock_post.side_effect = Exception("Network error")
@@ -247,7 +247,7 @@ class TestMCPClient(unittest.TestCase):
         self.assertFalse(result["success"])
         self.assertIn("error", result)
     
-    @patch('tools.mcp_tools.requests.Session.get')
+    @patch('tools.mcp.base.requests.Session.get')
     def test_list_tools_success(self, mock_get):
         """测试成功获取工具列表"""
         mock_response = MagicMock()
@@ -258,7 +258,7 @@ class TestMCPClient(unittest.TestCase):
         
         self.assertEqual(result, [{"name": "tool1"}, {"name": "tool2"}])
     
-    @patch('tools.mcp_tools.requests.Session.get')
+    @patch('tools.mcp.base.requests.Session.get')
     def test_list_tools_failure(self, mock_get):
         """测试失败获取工具列表"""
         mock_get.side_effect = Exception("Network error")
@@ -338,7 +338,7 @@ class TestMCPToolManager(unittest.TestCase):
         self.assertIn("test_client", self.manager.mcp_clients)
         self.assertEqual(self.manager.mcp_clients["test_client"], client)
     
-    @patch('tools.mcp_tools.MCPClient.call_tool')
+    @patch('tools.mcp.base.MCPClient.call_tool')
     def test_call_remote_tool(self, mock_call_tool):
         """测试调用远程工具"""
         mock_call_tool.return_value = {"result": "remote success"}

@@ -5,4 +5,5 @@ from .analysis_agent import AnalysisAgent
 from .tool_agent import ToolAgent
 from .communication_agent import CommunicationAgent
 from .execution_agent import ExecutionAgent
-from .monitor_agent import MonitorAgent 
+from .monitor_agent import MonitorAgent
+from .data_analysis_agent import DataAnalysisAgent 
