@@ -69,9 +69,42 @@ class TestWebSearchTool(unittest.TestCase):
         self.assertIn("query", result)
         self.assertIn("results", result)
         self.assertIn("total_results", result)
+        self.assertIn("search_engine", result)
         self.assertEqual(result["query"], "人工智能")
         self.assertEqual(result["total_results"], 3)
         self.assertEqual(len(result["results"]), 3)
+        self.assertEqual(result["search_engine"], "google")
+    
+    def test_execute_web_search_with_engine(self):
+        """测试使用指定搜索引擎"""
+        # 测试Bing搜索（应该抛出异常）
+        with self.assertRaises(NotImplementedError):
+            self.tool.execute(query="人工智能", max_results=2, search_engine="bing")
+        
+        # 测试DuckDuckGo搜索（应该抛出异常）
+        with self.assertRaises(NotImplementedError):
+            self.tool.execute(query="人工智能", max_results=2, search_engine="duckduckgo")
+    
+    def test_execute_news_search(self):
+        """测试新闻搜索"""
+        result = self.tool.execute(
+            query="人工智能", 
+            max_results=3, 
+            search_type="news",
+            start_date="2024-01-01",
+            end_date="2024-12-31"
+        )
+        
+        self.assertEqual(result["search_type"], "news")
+        self.assertIn("results", result)
+        self.assertGreater(len(result["results"]), 0)
+        
+        # 检查新闻结果的结构
+        if result["results"]:
+            news_item = result["results"][0]
+            self.assertIn("title", news_item)
+            self.assertIn("url", news_item)
+            self.assertIn("snippet", news_item)
     
     def test_get_parameters(self):
         """测试获取参数定义"""
@@ -82,6 +115,25 @@ class TestWebSearchTool(unittest.TestCase):
         self.assertIn("required", params)
         self.assertIn("query", params["properties"])
         self.assertIn("max_results", params["properties"])
+        self.assertIn("search_engine", params["properties"])
+        
+        # 检查搜索引擎参数的定义
+        search_engine_param = params["properties"]["search_engine"]
+        self.assertEqual(search_engine_param["type"], "string")
+        self.assertIn("enum", search_engine_param)
+        self.assertEqual(search_engine_param["enum"], ["google", "bing", "duckduckgo"])
+        self.assertEqual(search_engine_param["default"], "google")
+        
+        # 检查搜索类型参数
+        search_type_param = params["properties"]["search_type"]
+        self.assertEqual(search_type_param["type"], "string")
+        self.assertIn("enum", search_type_param)
+        self.assertEqual(search_type_param["enum"], ["web", "news"])
+        self.assertEqual(search_type_param["default"], "web")
+        
+        # 检查日期参数
+        self.assertIn("start_date", params["properties"])
+        self.assertIn("end_date", params["properties"])
 
 
 class TestFileOperationTool(unittest.TestCase):
