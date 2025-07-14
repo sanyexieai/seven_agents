@@ -1,0 +1,13 @@
+{
+  "mcpServers": {},
+  "localTools": {
+    "GoogleNewsSearchTool": {
+      "module": "tools.mcp.google_news_search",
+      "class": "GoogleNewsSearchTool"
+    },
+    "FileOperationTool": {
+      "module": "tools.mcp.file_operation",
+      "class": "FileOperationTool"
+    }
+  }
+} 

@@ -108,6 +108,7 @@ class GoogleNewsSearchTool(MCPTool):
             "total_results": len(news_results)
         }
 
+
     def get_parameters(self) -> Dict[str, Any]:
         return {
             "type": "object",

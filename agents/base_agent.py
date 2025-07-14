@@ -22,6 +22,7 @@ from langchain.schema.runnable import RunnablePassthrough
 
 # 配置和工具
 from config.settings import get_settings
+from tools.mcp_tools import get_all_mcp_tools, get_all_mcp_tool_descriptions, call_mcp_tool
 
 
 class BaseAgent(ABC):
@@ -171,8 +172,22 @@ class BaseAgent(ABC):
             except Exception as e:
                 self.logger.error(f"工具创建失败 {tool_config}: {e}")
         
-        self.logger.info(f"工具初始化完成: {len(tools)} 个工具")
+        # 自动加载 MCP 工具
+        try:
+            mcp_tools = get_all_mcp_tools()
+            tools.extend(mcp_tools)
+            self.logger.info(f"工具初始化完成: {len(tools)} 个工具（含MCP）")
+        except Exception as e:
+            self.logger.error(f"MCP工具加载失败: {e}")
         return tools
+
+    def get_all_tool_schemas(self):
+        """获取所有MCP工具的schema/描述，便于LLM参数补全和工具选择"""
+        return get_all_mcp_tool_descriptions()
+
+    def call_tool_by_name(self, tool_name, params):
+        """统一调用MCP工具"""
+        return call_mcp_tool(tool_name, params)
     
     def _create_tool(self, tool_config: Dict[str, Any]) -> Optional[BaseTool]:
         """创建工具实例"""
@@ -389,6 +404,11 @@ class BaseAgent(ABC):
             
         except Exception as e:
             self.logger.error(f"状态加载失败: {e}")
+    
+    def llm_structured(self, prompt: str) -> dict:
+        """统一结构化LLM输出，自动处理代码块格式，返回dict"""
+        llm_response = self.llm(prompt)
+        return self.llm.parse_code_block_response(llm_response)
     
     @abstractmethod
     def _get_agent_description(self) -> str:

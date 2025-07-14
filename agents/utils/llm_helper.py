@@ -183,6 +183,31 @@ class LLMHelper(LLM):
             print(f"原始响应: {response}")
             return {}
     
+    def parse_code_block_response(self, response: str) -> dict:
+        """
+        兼容 LLM 输出的 ```json、```yaml、``` 代码块，优先用json解析，失败再用yaml
+        """
+        import re
+        import json
+        content = response.strip()
+        # 提取代码块内容
+        match = re.search(r"```(?:json|yaml)?\s*([\s\S]*?)```", content)
+        if match:
+            content = match.group(1).strip()
+        # 先尝试json解析
+        try:
+            return json.loads(content)
+        except Exception:
+            pass
+        # 再尝试yaml解析
+        try:
+            import yaml
+            return yaml.safe_load(content)
+        except Exception as e:
+            print(f"代码块解析失败: {e}")
+            print(f"原始响应: {response}")
+            return {}
+    
     async def close(self):
         """关闭客户端"""
         await self.client.close()

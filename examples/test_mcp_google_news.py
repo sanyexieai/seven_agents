@@ -14,60 +14,55 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tools.rag_tools import RAGTool
 from tools.utility_tools import data_processor, file_utils
-from tools.mcp.google_news_search import GoogleNewsSearchTool
+from tools.mcp_tools import mcp_tool_manager, get_all_mcp_tool_descriptions
+# 假设有一个llm_generate_params函数可以根据prompt和schema自动生成参数
+# 这里用伪代码/占位符模拟LLM调用
 
+def llm_generate_params(tool_schema, user_query):
+    """
+    伪函数：用LLM根据工具schema和用户需求自动生成参数。
+    实际可用OpenAI/自有LLM API实现。
+    """
+    # 这里只做简单映射，实际应用LLM
+    return {
+        "query": user_query,
+        "max_results": 3
+    }
 
 async def test_google_news_search():
-    """测试Google News搜索功能"""
-    print("🔍 测试MCP Google News搜索功能")
+    print("🔍 测试MCP Google News搜索功能 (LLM参数自动生成)")
     print("=" * 60)
-    
-    # 移除WebSearchTool相关导入和实例化，改为google_news_search
-    
-    # 测试搜索关键词
     test_keywords = [
         "商汤科技 最新消息",
         "SenseTime AI技术",
         "商汤科技 财报"
     ]
-    
     all_news = []
-    
+    # 获取工具schema
+    tool = mcp_tool_manager.get_tool("google_news_search")
+    tool_schema = tool.get_parameters()
     for keyword in test_keywords:
         print(f"\n📰 搜索关键词: {keyword}")
         print("-" * 40)
-        
         try:
-            google_news_tool = GoogleNewsSearchTool()
-            search_result = google_news_tool.execute(
-                query=keyword,
-                max_results=3,
-                # start_date=(datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d"),
-                # end_date=datetime.now().strftime("%Y-%m-%d")
-            )
-            
+            # 1. 用LLM生成参数（这里用伪函数）
+            params = llm_generate_params(tool_schema, keyword)
+            # 2. 调用MCP工具
+            search_result = tool.execute(**params)
             print(f"✅ 搜索完成，找到 {len(search_result.get('results', []))} 条新闻")
-            
-            # 处理搜索结果
             for i, result in enumerate(search_result.get('results', []), 1):
                 print(f"\n{i}. {result.get('title', '无标题')}")
                 print(f"   来源: {result.get('source', '未知')}")
                 print(f"   日期: {result.get('date', '未知')}")
                 print(f"   摘要: {result.get('snippet', '无摘要')[:100]}...")
                 print(f"   URL: {result.get('url', '无链接')}")
-                
-                # 清理和存储新闻数据
                 cleaned_news = clean_news_data(result, keyword)
                 if cleaned_news:
                     all_news.append(cleaned_news)
-            
-            # 避免请求过于频繁
             await asyncio.sleep(3)
-            
         except Exception as e:
             print(f"❌ 搜索失败: {e}")
             continue
-    
     return all_news
 
 

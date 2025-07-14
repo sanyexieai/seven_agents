@@ -22,6 +22,10 @@ class MCPTool(ABC):
         """执行工具调用"""
         pass
     
+    def run(self, **params):
+        """统一run接口，默认调用execute"""
+        return self.execute(**params)
+
     def get_schema(self) -> Dict[str, Any]:
         """获取工具调用模式"""
         return {
@@ -75,15 +79,7 @@ class MCPToolManager:
     def __init__(self):
         self.tools: Dict[str, MCPTool] = {}
         self.mcp_clients: Dict[str, MCPClient] = {}
-        self._register_default_tools()
-    
-    def _register_default_tools(self):
-        """注册默认工具"""
-        from .file_operation import FileOperationTool
-        from .api_call import APICallTool
-        
-        self.register_tool(FileOperationTool())
-        self.register_tool(APICallTool())
+        # 移除自动注册默认工具，所有工具通过json配置注册
     
     def register_tool(self, tool: MCPTool):
         """注册工具"""
