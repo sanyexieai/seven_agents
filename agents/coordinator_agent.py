@@ -9,4 +9,7 @@ class CoordinatorAgent(BaseAgent):
     """
     def run(self, task: str, **kwargs):
         # 这里实现任务分解和协调逻辑
-        return f"[协调者] 处理任务: {task}" 
+        return f"[协调者] 处理任务: {task}"
+
+    def _get_agent_description(self) -> str:
+        return "全局任务协调智能体，负责任务分解与智能体调度。" 

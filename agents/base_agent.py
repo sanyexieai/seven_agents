@@ -56,7 +56,7 @@ class BaseAgent(ABC):
         # 状态管理
         self.conversation_history = []
         self.task_history = []
-        self.metadata = {
+        self.doc_meta = {
             "created_at": datetime.now().isoformat(),
             "agent_type": self.__class__.__name__,
             "version": "1.0.0"
@@ -359,7 +359,7 @@ class BaseAgent(ABC):
             "memory_type": self.memory.__class__.__name__,
             "conversation_count": len(self.conversation_history),
             "task_count": len(self.task_history),
-            "metadata": self.metadata
+            "doc_meta": self.doc_meta
         }
     
     def save_state(self, file_path: str):
@@ -367,7 +367,7 @@ class BaseAgent(ABC):
         state = {
             "conversation_history": self.conversation_history,
             "task_history": self.task_history,
-            "metadata": self.metadata
+            "doc_meta": self.doc_meta
         }
         
         with open(file_path, 'w', encoding='utf-8') as f:
@@ -383,7 +383,7 @@ class BaseAgent(ABC):
             
             self.conversation_history = state.get('conversation_history', [])
             self.task_history = state.get('task_history', [])
-            self.metadata.update(state.get('metadata', {}))
+            self.doc_meta.update(state.get('doc_meta', {}))
             
             self.logger.info(f"状态已从 {file_path} 加载")
             

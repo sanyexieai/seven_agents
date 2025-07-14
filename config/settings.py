@@ -45,6 +45,19 @@ class Settings:
     # 日志配置
     log_level: str = os.getenv('LOG_LEVEL', 'INFO')
     
+    # RAG配置
+    rag_model_name: str = os.getenv('RAG_MODEL_NAME', 'Qwen/Qwen3-Embedding-0.6B')
+    rag_vector_dim: int = int(os.getenv('RAG_VECTOR_DIM', '1024'))
+    rag_chunk_size: int = int(os.getenv('RAG_CHUNK_SIZE', '500'))
+    rag_chunk_overlap: int = int(os.getenv('RAG_CHUNK_OVERLAP', '50'))
+    rag_max_tokens: int = int(os.getenv('RAG_MAX_TOKENS', '4000'))
+    rag_top_k: int = int(os.getenv('RAG_TOP_K', '10'))
+    use_gpu: bool = os.getenv('USE_GPU', 'false').lower() == 'true'
+    rag_device: str = os.getenv('RAG_DEVICE', 'cpu')
+    search_max_results: int = int(os.getenv('SEARCH_MAX_RESULTS', '20'))
+    search_region: str = os.getenv('SEARCH_REGION', 'cn-zh')
+    # 数据库URL可复用sqlalchemy_database_url
+    
     @property
     def sqlalchemy_database_url(self) -> str:
         """获取数据库URL"""
@@ -78,6 +91,7 @@ POSTGRES_USER = settings.postgres_user
 POSTGRES_PASSWORD = settings.postgres_password
 POSTGRES_SSLMODE = settings.postgres_sslmode
 SQLALCHEMY_DATABASE_URL = settings.sqlalchemy_database_url
+DATABASE_URL = SQLALCHEMY_DATABASE_URL
 LOG_LEVEL = settings.log_level
 
 # LLM配置变量
@@ -89,3 +103,15 @@ ANTHROPIC_MODEL = settings.anthropic_model
 DEFAULT_LLM_MODEL = settings.default_llm_model
 DEFAULT_LLM_TEMPERATURE = settings.default_llm_temperature
 DEFAULT_LLM_MAX_TOKENS = settings.default_llm_max_tokens 
+
+# RAG配置变量
+RAG_MODEL_NAME = settings.rag_model_name
+RAG_VECTOR_DIM = settings.rag_vector_dim
+RAG_CHUNK_SIZE = settings.rag_chunk_size
+RAG_CHUNK_OVERLAP = settings.rag_chunk_overlap
+RAG_MAX_TOKENS = settings.rag_max_tokens
+RAG_TOP_K = settings.rag_top_k
+USE_GPU = settings.use_gpu
+RAG_DEVICE = settings.rag_device
+SEARCH_MAX_RESULTS = settings.search_max_results
+SEARCH_REGION = settings.search_region 

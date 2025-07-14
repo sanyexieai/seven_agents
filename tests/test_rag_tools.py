@@ -23,11 +23,11 @@ class TestDocument(unittest.TestCase):
     def test_document_initialization(self):
         """测试文档初始化"""
         content = "测试文档内容"
-        metadata = {"source": "test", "author": "tester"}
-        doc = Document(content, metadata)
+        doc_meta = {"source": "test", "author": "tester"}
+        doc = Document(content, doc_meta)
         
         self.assertEqual(doc.content, content)
-        self.assertEqual(doc.metadata, metadata)
+        self.assertEqual(doc.doc_meta, doc_meta)
         self.assertIsNotNone(doc.doc_id)
         self.assertIsNotNone(doc.created_at)
     
@@ -43,10 +43,10 @@ class TestDocument(unittest.TestCase):
         
         self.assertIn("doc_id", doc_dict)
         self.assertIn("content", doc_dict)
-        self.assertIn("metadata", doc_dict)
+        self.assertIn("doc_meta", doc_dict)
         self.assertIn("created_at", doc_dict)
         self.assertEqual(doc_dict["content"], "测试内容")
-        self.assertEqual(doc_dict["metadata"], {"source": "test"})
+        self.assertEqual(doc_dict["doc_meta"], {"source": "test"})
 
 
 class TestSimpleVectorStore(unittest.TestCase):
@@ -159,9 +159,9 @@ class TestDocumentLoader(unittest.TestCase):
         
         self.assertIsNotNone(doc)
         self.assertEqual(doc.content, "测试文本内容")
-        self.assertIn("file_path", doc.metadata)
-        self.assertIn("file_size", doc.metadata)
-        self.assertEqual(doc.metadata["file_type"], ".txt")
+        self.assertIn("file_path", doc.doc_meta)
+        self.assertIn("file_size", doc.doc_meta)
+        self.assertEqual(doc.doc_meta["file_type"], ".txt")
     
     def test_load_file_md(self):
         """测试加载markdown文件"""
@@ -174,7 +174,7 @@ class TestDocumentLoader(unittest.TestCase):
         
         self.assertIsNotNone(doc)
         self.assertEqual(doc.content, "# 测试标题\n\n测试内容")
-        self.assertEqual(doc.metadata["file_type"], ".md")
+        self.assertEqual(doc.doc_meta["file_type"], ".md")
     
     def test_load_unsupported_file(self):
         """测试加载不支持的文件类型"""

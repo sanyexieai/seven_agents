@@ -53,7 +53,10 @@ agents = [
     AgentModel(key='tool_api', name='工具调用', type='tool', description='外部API集成', config={"api_key": "xxx"}, enabled=True),
 ]
 
-session.add_all(agents)
+for agent in agents:
+    exists = session.query(AgentModel).filter_by(key=agent.key).first()
+    if not exists:
+        session.add(agent)
 session.commit()
 session.close()
 print("测试数据已插入！") 

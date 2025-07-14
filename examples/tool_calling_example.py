@@ -61,7 +61,7 @@ def demo_rag_tools():
     print("\n1. 添加文档到知识库:")
     add_result = rag_tool.add_document(
         content="人工智能是计算机科学的一个分支，致力于创建能够执行通常需要人类智能的任务的系统。",
-        metadata={"source": "demo", "topic": "AI"}
+        doc_meta={"source": "demo", "topic": "AI"}
     )
     print(f"添加文档结果: {add_result}")
     

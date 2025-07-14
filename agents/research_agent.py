@@ -9,4 +9,7 @@ class ResearchAgent(BaseAgent):
     """
     def run(self, task: str, **kwargs):
         # 这里实现信息检索和RAG逻辑
-        return f"[研究] 处理任务: {task}" 
+        return f"[研究] 处理任务: {task}"
+
+    def _get_agent_description(self) -> str:
+        return "信息检索与知识库构建智能体，专注AI领域新闻与数据收集。" 

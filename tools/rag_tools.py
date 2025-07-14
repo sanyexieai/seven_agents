@@ -11,55 +11,31 @@ from datetime import datetime
 from pathlib import Path
 import numpy as np
 from abc import ABC, abstractmethod
+from config.settings import (
+    RAG_MODEL_NAME, RAG_VECTOR_DIM, RAG_CHUNK_SIZE, RAG_CHUNK_OVERLAP,
+    RAG_MAX_TOKENS, RAG_TOP_K, USE_GPU, RAG_DEVICE, SQLALCHEMY_DATABASE_URL
+)
+from sqlalchemy import create_engine, Column, String, LargeBinary, JSON, ForeignKey, Text
+from sqlalchemy.orm import sessionmaker, declarative_base, relationship
+import torch
+from transformers import AutoTokenizer, AutoModel
+from database.rag_db import DBVectorStore
+from tools.rag_types import Document, VectorStore
 
+Base = declarative_base()
 
-class Document:
-    """文档类"""
-    
-    def __init__(self, content: str, metadata: Dict[str, Any] = None, doc_id: str = None):
-        self.content = content
-        self.metadata = metadata or {}
-        self.doc_id = doc_id or self._generate_id()
-        self.created_at = datetime.now()
-    
-    def _generate_id(self) -> str:
-        """生成文档ID"""
-        content_hash = hashlib.md5(self.content.encode()).hexdigest()
-        return f"doc_{content_hash[:8]}"
-    
-    def to_dict(self) -> Dict[str, Any]:
-        """转换为字典"""
-        return {
-            "doc_id": self.doc_id,
-            "content": self.content,
-            "metadata": self.metadata,
-            "created_at": self.created_at.isoformat()
-        }
+class DocumentORM(Base):
+    __tablename__ = 'rag_documents'
+    id = Column(String, primary_key=True)
+    content = Column(Text)
+    doc_meta = Column(JSON)
+    vector = relationship('VectorORM', back_populates='document', uselist=False, cascade="all, delete-orphan")
 
-
-class VectorStore(ABC):
-    """向量存储基类"""
-    
-    @abstractmethod
-    def add_documents(self, documents: List[Document]) -> bool:
-        """添加文档到向量存储"""
-        pass
-    
-    @abstractmethod
-    def search(self, query: str, top_k: int = 5) -> List[Tuple[Document, float]]:
-        """搜索相似文档"""
-        pass
-    
-    @abstractmethod
-    def delete_document(self, doc_id: str) -> bool:
-        """删除文档"""
-        pass
-    
-    @abstractmethod
-    def get_document(self, doc_id: str) -> Optional[Document]:
-        """获取文档"""
-        pass
-
+class VectorORM(Base):
+    __tablename__ = 'rag_vectors'
+    doc_id = Column(String, ForeignKey('rag_documents.id', ondelete='CASCADE'), primary_key=True)
+    vector = Column(LargeBinary)  # float32 bytes
+    document = relationship('DocumentORM', back_populates='vector')
 
 class SimpleVectorStore(VectorStore):
     """简单的内存向量存储实现"""
@@ -154,14 +130,14 @@ class DocumentLoader:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            metadata = {
+            doc_meta = {
                 "file_path": file_path,
                 "file_size": len(content),
                 "file_type": path.suffix,
                 "last_modified": datetime.fromtimestamp(path.stat().st_mtime).isoformat()
             }
             
-            return Document(content, metadata)
+            return Document(content, doc_meta)
             
         except Exception as e:
             print(f"加载文件失败 {file_path}: {e}")
@@ -186,81 +162,89 @@ class DocumentLoader:
 
 
 class RAGProcessor:
-    """RAG处理器"""
-    
+    """RAG处理器，所有操作走DBVectorStore"""
     def __init__(self, vector_store: VectorStore = None):
-        self.vector_store = vector_store or SimpleVectorStore()
+        self.vector_store = vector_store or DBVectorStore()
         self.document_loader = DocumentLoader()
-    
+
     def add_documents(self, documents: List[Document]) -> bool:
-        """添加文档到知识库"""
-        return self.vector_store.add_documents(documents)
-    
+        """
+        批量添加文档到知识库，自动embedding并存储向量。
+        :param documents: 文档列表
+        :return: 添加结果
+        """
+        try:
+            return self.vector_store.add_documents(documents)
+        except Exception as e:
+            print(f"添加文档失败: {e}")
+            return False
+
     def add_file(self, file_path: str) -> bool:
-        """添加单个文件到知识库"""
         doc = self.document_loader.load_file(file_path)
         if doc:
-            return self.vector_store.add_documents([doc])
+            return self.add_documents([doc])
         return False
-    
+
     def add_directory(self, directory_path: str) -> bool:
-        """添加目录中的所有文件到知识库"""
         documents = self.document_loader.load_directory(directory_path)
         if documents:
-            return self.vector_store.add_documents(documents)
+            return self.add_documents(documents)
         return False
-    
+
     def search(self, query: str, top_k: int = 5) -> List[Tuple[Document, float]]:
-        """搜索相关文档"""
-        return self.vector_store.search(query, top_k)
-    
+        """
+        根据查询词搜索相似文档。
+        :param query: 查询词
+        :param top_k: 返回的相似文档数量
+        :return: 文档列表及其相似度
+        """
+        try:
+            return self.vector_store.search(query, top_k)
+        except Exception as e:
+            print(f"搜索失败: {e}")
+            return []
+
     def generate_response(self, query: str, context_docs: List[Document] = None) -> str:
-        """基于检索结果生成回答"""
-        if context_docs is None:
-            # 自动检索相关文档
-            search_results = self.search(query, top_k=3)
-            context_docs = [doc for doc, score in search_results]
-        
-        # 构建上下文
-        context = "\n\n".join([doc.content for doc in context_docs])
-        
-        # 这里应该调用LLM生成回答
-        # 现在返回简单的模板回答
-        return f"""基于检索到的信息，回答您的问题：
+        try:
+            if context_docs is None:
+                search_results = self.search(query, top_k=3)
+                context_docs = [doc for doc, score in search_results]
+            context = "\n\n".join([doc.content for doc in context_docs])
+            return f"""基于检索到的信息，回答您的问题：\n\n问题：{query}\n\n相关文档内容：\n{context}\n\n回答：根据以上信息，我可以为您提供相关的回答。这是一个基于RAG生成的回答示例。"""
+        except Exception as e:
+            return f"RAG生成回答失败: {e}"
 
-问题：{query}
-
-相关文档内容：
-{context}
-
-回答：根据以上信息，我可以为您提供相关的回答。这是一个基于RAG生成的回答示例。"""
-    
     def get_knowledge_stats(self) -> Dict[str, Any]:
-        """获取知识库统计信息"""
-        if isinstance(self.vector_store, SimpleVectorStore):
-            return {
-                "total_documents": len(self.vector_store.documents),
-                "storage_type": "memory",
-                "last_updated": datetime.now().isoformat()
-            }
-        return {"error": "未知的存储类型"}
-
+        try:
+            # 只统计文档数量
+            if hasattr(self.vector_store, 'Session'):
+                session = self.vector_store.Session()
+                try:
+                    total_documents = session.query(self.vector_store.DocumentORM).count()
+                finally:
+                    session.close()
+                return {
+                    "total_documents": total_documents,
+                    "storage_type": "database",
+                    "last_updated": datetime.now().isoformat()
+                }
+            return {"error": "未知的存储类型"}
+        except Exception as e:
+            return {"error": str(e)}
 
 class RAGTool:
-    """RAG工具类"""
-    
+    """RAG工具类，面向业务接口"""
     def __init__(self, knowledge_base_path: str = "./data/documents"):
         self.knowledge_base_path = knowledge_base_path
         self.rag_processor = RAGProcessor()
         self._load_existing_knowledge()
-    
+
     def _load_existing_knowledge(self):
-        """加载现有的知识库"""
+        # 可选：首次加载本地目录到知识库
         if os.path.exists(self.knowledge_base_path):
             self.rag_processor.add_directory(self.knowledge_base_path)
-    
+
     def search_knowledge(self, query: str, top_k: int = 5) -> Dict[str, Any]:
-        """搜索知识库"""
         results = self.rag_processor.search(query, top_k)
         return {
             "query": query,
@@ -268,26 +252,42 @@ class RAGTool:
                 {
                     "doc_id": doc.doc_id,
                     "content": doc.content[:200] + "..." if len(doc.content) > 200 else doc.content,
-                    "metadata": doc.metadata,
+                    "doc_meta": doc.doc_meta,
                     "similarity": float(score)
                 }
                 for doc, score in results
             ],
             "total_results": len(results)
         }
-    
-    def add_document(self, content: str, metadata: Dict[str, Any] = None) -> Dict[str, Any]:
-        """添加文档到知识库"""
-        doc = Document(content, metadata)
+
+    def add_document(self, content: str, doc_meta: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        添加单条文档到知识库，自动embedding并存储向量。
+        :param content: 文档内容
+        :param doc_meta: 文档元数据
+        :return: 添加结果
+        """
+        doc = Document(content, doc_meta)
         success = self.rag_processor.add_documents([doc])
         return {
             "success": success,
             "doc_id": doc.doc_id,
             "message": "文档添加成功" if success else "文档添加失败"
         }
-    
+
+    def add_documents(self, contents: List[str], doc_metas: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        批量添加多条文档到知识库。
+        :param contents: 文档内容列表
+        :param doc_metas: 文档元数据列表
+        :return: 每条文档的添加结果
+        """
+        results = []
+        for content, doc_meta in zip(contents, doc_metas):
+            results.append(self.add_document(content, doc_meta))
+        return results
+
     def generate_answer(self, question: str) -> Dict[str, Any]:
-        """生成回答"""
         try:
             answer = self.rag_processor.generate_response(question)
             return {
@@ -300,9 +300,8 @@ class RAGTool:
                 "success": False,
                 "error": str(e)
             }
-    
+
     def get_knowledge_stats(self) -> Dict[str, Any]:
-        """获取知识库统计"""
         return self.rag_processor.get_knowledge_stats()
 
 

@@ -73,3 +73,9 @@ PyYAML>=6.0
 # 代码执行器依赖
 ipykernel>=6.0.0
 jupyter>=1.0.0
+transformers>=4.36.0
+torch>=2.0.0
+sqlalchemy>=2.0.0
+
+pgvector>=0.2.4
+psycopg2>=2.9.0

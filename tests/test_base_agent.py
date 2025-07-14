@@ -47,7 +47,7 @@ class TestBaseAgent(unittest.TestCase):
         self.assertIn("memory_type", status)
         self.assertIn("conversation_count", status)
         self.assertIn("task_count", status)
-        self.assertIn("metadata", status)
+        self.assertIn("doc_meta", status)
         
         self.assertEqual(status["name"], "测试智能体")
         self.assertEqual(status["type"], "TestAgent")

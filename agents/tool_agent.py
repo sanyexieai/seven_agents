@@ -217,8 +217,7 @@ class ToolAgent(BaseAgent):
         ]
     
     def _get_agent_description(self) -> str:
-        """获取智能体描述"""
-        return """工具调用智能体，专门负责执行各种工具操作，包括搜索、文件处理、API调用、数据处理等任务。"""
+        return "工具调用与API集成智能体，负责外部工具和RAG知识库操作。"
     
     def list_available_tools(self):
         """列出可用工具"""

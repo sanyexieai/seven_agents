@@ -151,5 +151,4 @@ explanation: "代码执行结果的解释"
         return self.code_executor.get_environment_info()
     
     def _get_agent_description(self) -> str:
-        """获取智能体描述"""
-        return "专业的数据分析智能体，支持代码执行和数据分析" 
+        return "数据分析与可视化专家，擅长多源数据融合分析。" 

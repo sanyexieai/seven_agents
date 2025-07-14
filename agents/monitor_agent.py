@@ -9,4 +9,7 @@ class MonitorAgent(BaseAgent):
     """
     def run(self, task: str, **kwargs):
         # 这里实现系统监控和日志逻辑
-        return f"[监控] 处理任务: {task}" 
+        return f"[监控] 处理任务: {task}"
+
+    def _get_agent_description(self) -> str:
+        return "系统监控与性能分析智能体，保障平台稳定运行。" 

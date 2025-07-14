@@ -9,4 +9,7 @@ class CommunicationAgent(BaseAgent):
     """
     def run(self, task: str, **kwargs):
         # 这里实现A2A通信和消息路由逻辑
-        return f"[通信] 处理任务: {task}" 
+        return f"[通信] 处理任务: {task}"
+
+    def _get_agent_description(self) -> str:
+        return "智能体间通信与消息路由专家，保障多智能体协作。" 
