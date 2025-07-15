@@ -18,8 +18,8 @@ def _format_response(resp):
         "data": data
     }
 
-@mcp.tool()
-async def get(url: str, headers: dict = None):
+@mcp.tool(description="发起GET请求，返回响应内容")
+async def api_get(url: str, headers: dict = None):
     headers = headers or {}
     try:
         resp = requests.get(url, headers=headers, timeout=30)
@@ -27,8 +27,8 @@ async def get(url: str, headers: dict = None):
     except Exception as e:
         return {"success": False, "error": str(e)}
 
-@mcp.tool()
-async def post(url: str, headers: dict = None, data: dict = None):
+@mcp.tool(description="发起POST请求，支持JSON数据体")
+async def api_post(url: str, headers: dict = None, data: dict = None):
     headers = headers or {}
     data = data or {}
     try:
@@ -37,8 +37,8 @@ async def post(url: str, headers: dict = None, data: dict = None):
     except Exception as e:
         return {"success": False, "error": str(e)}
 
-@mcp.tool()
-async def put(url: str, headers: dict = None, data: dict = None):
+@mcp.tool(description="发起PUT请求，支持JSON数据体")
+async def api_put(url: str, headers: dict = None, data: dict = None):
     headers = headers or {}
     data = data or {}
     try:
@@ -47,8 +47,8 @@ async def put(url: str, headers: dict = None, data: dict = None):
     except Exception as e:
         return {"success": False, "error": str(e)}
 
-@mcp.tool()
-async def delete(url: str, headers: dict = None):
+@mcp.tool(description="发起DELETE请求")
+async def api_delete(url: str, headers: dict = None):
     headers = headers or {}
     try:
         resp = requests.delete(url, headers=headers, timeout=30)
@@ -56,8 +56,8 @@ async def delete(url: str, headers: dict = None):
     except Exception as e:
         return {"success": False, "error": str(e)}
 
-@mcp.tool()
-async def patch(url: str, headers: dict = None, data: dict = None):
+@mcp.tool(description="发起PATCH请求，支持JSON数据体")
+async def api_patch(url: str, headers: dict = None, data: dict = None):
     headers = headers or {}
     data = data or {}
     try:

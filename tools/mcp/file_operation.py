@@ -7,7 +7,7 @@ from typing import Dict, Any
 from tools.mcp import mcp
 import os
 
-@mcp.tool()
+@mcp.tool(description="读取指定文件内容")
 async def read_file(file_path: str):
     if not file_path:
         return {"success": False, "error": "缺少file_path参数"}
@@ -18,7 +18,7 @@ async def read_file(file_path: str):
     except Exception as e:
         return {"success": False, "error": str(e)}
 
-@mcp.tool()
+@mcp.tool(description="写入内容到指定文件（覆盖模式）")
 async def write_file(file_path: str, content: str):
     if not file_path:
         return {"success": False, "error": "缺少file_path参数"}
@@ -29,7 +29,7 @@ async def write_file(file_path: str, content: str):
     except Exception as e:
         return {"success": False, "error": str(e)}
 
-@mcp.tool()
+@mcp.tool(description="向指定文件追加内容")
 async def append_file(file_path: str, content: str):
     if not file_path:
         return {"success": False, "error": "缺少file_path参数"}

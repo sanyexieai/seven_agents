@@ -4,8 +4,8 @@ import requests
 from bs4 import BeautifulSoup
 import logging
 
-@mcp.tool()
-async def search_news(query: str, max_results: int = 5, start_date: str = None, end_date: str = None):
+@mcp.tool(description="谷歌新闻搜索，支持关键词、时间范围和最大条数")
+async def google_news_search(query: str, max_results: int = 5, start_date: str = None, end_date: str = None):
     logger = logging.getLogger("google_news_search")
     logger.setLevel(logging.INFO)
     if not logger.handlers:

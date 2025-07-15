@@ -40,12 +40,11 @@ class AgentCoordinatorAgent(BaseAgent):
             agent_list=json.dumps(agent_list, ensure_ascii=False, indent=2),
             user_query=user_query
         )
-        # 1. 让LLM选择智能体并补全参数
+        # 1. 让LLM选择智能体
         agent_call = self.llm_structured(prompt)
         if not agent_call or "agent_name" not in agent_call:
             return f"LLM未能正确选择智能体: {agent_call}"
         agent_name = agent_call["agent_name"]
-        # params = agent_call.get("params", {})
         # 2. 动态实例化并调用被选中智能体
         agent = get_agent_by_name(agent_name)
         if not agent:

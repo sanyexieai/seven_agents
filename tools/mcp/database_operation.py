@@ -1,79 +1,57 @@
 from tools.mcp import mcp
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import sessionmaker
-from models.agent_model import AgentModel
 from config.settings import SQLALCHEMY_DATABASE_URL
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, echo=False)
 Session = sessionmaker(bind=engine)
 
-@mcp.tool()
-async def sync_schema():
-    from models.agent_model import Base
-    Base.metadata.create_all(engine)
-    return '数据库结构同步完成。'
-
-@mcp.tool()
-async def get_table_info():
-    inspector = inspect(engine)
-    if 'agents' in inspector.get_table_names():
-        columns = inspector.get_columns('agents')
-        info = '\n'.join([f"{col['name']}: {col['type']}" for col in columns])
-        return f"agents表结构:\n{info}"
-    return '未找到agents表。'
-
-@mcp.tool()
-async def query_agents():
+@mcp.tool(description="创建表，传入SQL建表语句")
+async def database_create_table(sql: str):
+    """执行CREATE TABLE语句创建新表"""
     session = Session()
     try:
-        agents = session.query(AgentModel).all()
-        result = [f"id={a.id}, key={a.key}, name={a.name}, type={a.type}, enabled={a.enabled}" for a in agents]
-        return '\n'.join(result) if result else '无数据。'
+        session.execute(text(sql))
+        session.commit()
+        return {"success": True, "message": "表创建成功"}
+    except Exception as e:
+        session.rollback()
+        return {"success": False, "error": str(e)}
     finally:
         session.close()
 
-@mcp.tool()
-async def insert_agent(key: str, name: str, type: str):
+@mcp.tool(description="删除表，传入表名")
+async def database_drop_table(table_name: str):
+    """删除指定表"""
     session = Session()
     try:
-        agent = AgentModel(key=key, name=name, type=type)
-        session.add(agent)
+        session.execute(text(f"DROP TABLE IF EXISTS {table_name}"))
         session.commit()
-        return f'已插入agent: key={key}, name={name}, type={type}'
+        return {"success": True, "message": f"表 {table_name} 已删除"}
     except Exception as e:
         session.rollback()
-        return f'插入失败: {e}'
+        return {"success": False, "error": str(e)}
     finally:
         session.close()
 
-@mcp.tool()
-async def delete_agent(key: str):
+@mcp.tool(description="通用SQL查询，支持自定义SQL语句和参数")
+async def database_execute_sql(sql: str, params: dict = None):
+    """
+    通用SQL执行工具，支持任意查询/写入/更新/删除。
+    - sql: SQL语句（如SELECT * FROM tablename WHERE name=:name）
+    - params: 参数字典（如{"name": "张三"}）
+    """
     session = Session()
     try:
-        count = session.query(AgentModel).filter_by(key=key).delete()
-        session.commit()
-        return f'已删除{count}条记录。'
+        result = session.execute(text(sql), params or {})
+        if sql.strip().lower().startswith("select"):
+            rows = result.fetchall()
+            return [dict(row) for row in rows]
+        else:
+            session.commit()
+            return {"success": True, "rowcount": result.rowcount}
     except Exception as e:
         session.rollback()
-        return f'删除失败: {e}'
-    finally:
-        session.close()
-
-@mcp.tool()
-async def update_agent(key: str, name: str = None, type: str = None):
-    session = Session()
-    try:
-        agent = session.query(AgentModel).filter_by(key=key).first()
-        if not agent:
-            return '未找到指定key的记录。'
-        if name is not None:
-            agent.name = name
-        if type is not None:
-            agent.type = type
-        session.commit()
-        return f'已更新agent: key={key}, name={agent.name}, type={agent.type}'
-    except Exception as e:
-        session.rollback()
-        return f'更新失败: {e}'
+        return {"success": False, "error": str(e)}
     finally:
         session.close() 
