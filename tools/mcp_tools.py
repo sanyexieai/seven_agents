@@ -2,106 +2,130 @@
 MCP (Model Context Protocol) 工具模块
 提供与外部模型和服务的工具调用功能
 
-此文件所有MCP工具（本地和远程）均通过json配置动态加载和注册，无任何硬编码import。
+本文件只保留MCP协议推荐的远程调用方式。
 """
 
 import os
 import json
-import subprocess
-import importlib
-from .mcp import (
-    MCPTool,
-    MCPClient,
-    MCPToolManager,
-    FileOperationTool,
-    APICallTool,
-)
+import asyncio
+import logging
+from typing import Any, Dict, Optional, List
 
-# 创建默认的MCP工具管理器实例
-mcp_tool_manager = MCPToolManager()
+logger = logging.getLogger("mcp_tools")
+logger.setLevel(logging.INFO)
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+    logger.addHandler(handler)
 
-# 动态加载MCP服务器配置并注册MCPClient和本地工具
-MCP_SERVERS_CONFIG = os.environ.get("MCP_SERVERS_CONFIG", "mcp_servers.json")
-if os.path.exists(MCP_SERVERS_CONFIG):
-    with open(MCP_SERVERS_CONFIG, "r", encoding="utf-8") as f:
-        config = json.load(f)
-    # 注册远程MCP服务
-    for name, server in config.get("mcpServers", {}).items():
-        if server.get("command"):
-            subprocess.Popen(
-                [server["command"]] + server.get("args", []),
-                env={**server.get("env", {}), **os.environ}
-            )
-        port = server.get("env", {}).get("PORT", "8080")
-        client = MCPClient(server_url=f"http://localhost:{port}")
-        mcp_tool_manager.register_mcp_client(name, client)
-    # 注册本地Python工具
-    for tool_name, tool_info in config.get("localTools", {}).items():
-        module = importlib.import_module(tool_info["module"])
-        tool_cls = getattr(module, tool_info["class"])
-        tool_instance = tool_cls()
-        mcp_tool_manager.register_tool(tool_instance)
+def load_mcp_servers_config(config_path=None) -> dict:
+    config_path = config_path or os.path.join(os.path.dirname(__file__), '..', 'mcp_servers.json')
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        logger.warning(f"无法读取mcp_servers.json: {e}")
+        return {}
 
+def get_server_url(server_name: Optional[str] = None) -> str:
+    config = load_mcp_servers_config()
+    servers = config.get('mcpServers', {})
+    if not servers:
+        raise RuntimeError("mcpServers.json未配置任何MCP服务")
+    if server_name and server_name in servers:
+        return servers[server_name]['url']
+    # 默认取第一个
+    return next(iter(servers.values()))['url']
 
-def get_all_mcp_tool_descriptions():
-    """
-    获取所有已注册MCP工具的描述信息（含name、description、parameters），便于传递给LLM。
-    :return: List[Dict]
-    """
-    return [
-        {
-            "name": tool.name,
-            "description": getattr(tool, "description", ""),
-            "parameters": tool.get_parameters() if hasattr(tool, "get_parameters") else {}
-        }
-        for tool in mcp_tool_manager.tools.values()
-    ]
-
-def get_all_mcp_tools():
-    """
-    获取所有已注册的MCP工具对象（便于agent自动集成）
-    :return: List[MCPTool]
-    """
-    return list(mcp_tool_manager.tools.values())
-
-def call_mcp_tool(tool_name, params, method=None):
-    """
-    统一调用MCP工具，自动适配多方法风格
-    :param tool_name: 工具名称
-    :param params: 参数dict
-    :param method: 多方法工具的方法名（可选，优先于params['method']）
-    :return: 工具执行结果
-    """
-    tool = mcp_tool_manager.tools.get(tool_name)
-    if not tool:
-        raise ValueError(f"MCP工具未注册: {tool_name}")
-    # 判断是否为多方法风格
-    if hasattr(tool, "get_methods"):
-        methods = tool.get_methods()
-        # 优先用显式method参数
-        if method is not None:
-            params = dict(params)
-            params["method"] = method
-        # 如果是多方法工具，且params里没有method，才报错
-        if len(methods) > 1 and "method" not in params:
-            raise ValueError(f"MCP多方法工具 '{tool_name}' 必须传 method 字段，可选: {list(methods.keys())}")
-        return tool.execute(**params)
-    # 单方法兼容
-    if hasattr(tool, "execute"):
-        return tool.execute(**params)
-    elif callable(tool):
-        return tool(**params)
+def get_transport_type(url: str) -> str:
+    if url.endswith('/sse'):
+        return 'sse'
+    elif url.endswith('/stdio'):
+        return 'stdio'
     else:
-        raise TypeError(f"工具 {tool_name} 不可调用，实际类型: {type(tool)}，属性: {dir(tool)}")
+        return 'streamable_http'
+
+async def _call_tool_async(tool_name, params, method=None, server_name=None, retries=2, delay=1.0):
+    url = get_server_url(server_name)
+    transport = get_transport_type(url)
+    remote_params = dict(params)
+    if method is not None:
+        remote_params["method"] = method
+
+    from mcp.client.session import ClientSession
+    if transport == 'sse':
+        from mcp.client.sse import sse_client
+        async with sse_client(url, timeout=60) as (read_stream, write_stream):
+            async with ClientSession(read_stream, write_stream) as session:
+                await session.initialize()
+                for attempt in range(retries):
+                    try:
+                        return await session.call_tool(tool_name, arguments=remote_params)
+                    except Exception as e:
+                        logger.warning(f"调用失败: {e}，重试{attempt+1}/{retries}")
+                        if attempt < retries - 1:
+                            await asyncio.sleep(delay)
+                        else:
+                            raise
+    else:
+        from mcp.client.streamable_http import streamablehttp_client
+        async with streamablehttp_client(url, timeout=60) as (read_stream, write_stream, _):
+            async with ClientSession(read_stream, write_stream) as session:
+                await session.initialize()
+                for attempt in range(retries):
+                    try:
+                        return await session.call_tool(tool_name, arguments=remote_params)
+                    except Exception as e:
+                        logger.warning(f"调用失败: {e}，重试{attempt+1}/{retries}")
+                        if attempt < retries - 1:
+                            await asyncio.sleep(delay)
+                        else:
+                            raise
+
+def call_mcp_tool(tool_name, params, method=None, server_name=None, **kwargs):
+    """同步调用MCP工具，自动选服务和协议"""
+    return asyncio.run(_call_tool_async(tool_name, params, method, server_name, **kwargs))
+
+async def list_mcp_tools_async(server_name=None):
+    url = get_server_url(server_name)
+    transport = get_transport_type(url)
+    from mcp.client.session import ClientSession
+    if transport == 'sse':
+        from mcp.client.sse import sse_client
+        async with sse_client(url, timeout=60) as (read_stream, write_stream):
+            async with ClientSession(read_stream, write_stream) as session:
+                await session.initialize()
+                result = await session.list_tools()
+                return [tool.model_dump() for tool in getattr(result, "tools", [])]
+    else:
+        from mcp.client.streamable_http import streamablehttp_client
+        async with streamablehttp_client(url, timeout=60) as (read_stream, write_stream, _):
+            async with ClientSession(read_stream, write_stream) as session:
+                await session.initialize()
+                result = await session.list_tools()
+                return [tool.model_dump() for tool in getattr(result, "tools", [])]
+
+def list_mcp_tools(server_name=None):
+    return asyncio.run(list_mcp_tools_async(server_name))
+
+def format_tool_schema(tool: dict) -> str:
+    """格式化工具schema，便于LLM提示词"""
+    args_desc = []
+    props = tool.get("inputSchema", {}).get("properties", {})
+    required = tool.get("inputSchema", {}).get("required", [])
+    for param, info in props.items():
+        desc = f"- {param}: {info.get('description', 'No description')}"
+        if param in required:
+            desc += " (required)"
+        args_desc.append(desc)
+    output = f"Tool: {tool.get('name')}\n"
+    if tool.get('title'):
+        output += f"User-readable title: {tool['title']}\n"
+    output += f"Description: {tool.get('description')}\nArguments:\n" + "\n".join(args_desc)
+    return output
 
 __all__ = [
-    "MCPTool",
-    "MCPClient",
-    "MCPToolManager", 
-    "FileOperationTool",
-    "APICallTool",
-    "mcp_tool_manager",
-    "get_all_mcp_tool_descriptions",
-    "get_all_mcp_tools",
-    "call_mcp_tool"
+    "call_mcp_tool",
+    "list_mcp_tools",
+    "format_tool_schema"
 ] 

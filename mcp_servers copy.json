@@ -9,9 +9,9 @@
       "module": "tools.mcp.file_operation",
       "class": "FileOperationTool"
     },
-    "APICallTool": {
-      "module": "tools.mcp.api_call",
-      "class": "APICallTool"
+    "DatabaseOperationTool": {
+      "module": "tools.mcp.database_operation",
+      "class": "DatabaseOperationTool"
     }
   }
 } 

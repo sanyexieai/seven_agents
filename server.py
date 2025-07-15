@@ -1,41 +1,69 @@
-import os
-import importlib
-import pkgutil
-from mcp.server.fastmcp import FastMCP
-from tools.mcp.base import MCPTool
+import anyio
+import click
+from tools.mcp import mcp
 
-MCP = FastMCP("AllToolsDemo")
-registered_tools = []
+# 只需import所有工具模块，确保装饰器注册生效
+import tools.mcp.google_news_search
+import tools.mcp.file_operation
+import tools.mcp.api_call
+import tools.mcp.database_operation
 
-# 自动遍历 tools/mcp 目录，查找所有 MCPTool 子类
-mcp_dir = os.path.join(os.path.dirname(__file__), "tools", "mcp")
-for finder, name, ispkg in pkgutil.iter_modules([mcp_dir]):
-    if name in ("base", "__init__"):  # 跳过基类和init
-        continue
-    module_path = f"tools.mcp.{name}"
-    module = importlib.import_module(module_path)
-    # 查找所有MCPTool子类
-    for attr in dir(module):
-        obj = getattr(module, attr)
-        if isinstance(obj, type) and issubclass(obj, MCPTool) and obj is not MCPTool:
-            tool_instance = obj()
-            if hasattr(tool_instance, "get_methods"):
-                for method_name, method_schema in tool_instance.get_methods().items():
-                    # 注册handler而不是getattr
-                    def make_handler(tool, mname):
-                        def handler(**kwargs):
-                            return tool.execute(mname, **kwargs)
-                        return handler
-                    MCP.tool(name=f"{obj.__name__}.{method_name}")(make_handler(tool_instance, method_name))
-                    registered_tools.append(f"{obj.__name__}.{method_name}")
+# 不要在本文件再创建mcp实例，确保全局唯一
 
-if __name__ == "__main__":
+@click.command()
+@click.option("--port", default=8080, help="Port to listen on for SSE")
+@click.option(
+    "--transport",
+    type=click.Choice(["stdio", "sse"]),
+    default="sse",
+    help="Transport type",
+)
+def main(port: int, transport: str) -> int:
     print("==============================")
     print("MCP服务即将启动！")
     print("服务名称: AllToolsDemo")
-    print("监听端口: 8080 (默认)")
-    print("自动注册的工具方法:")
-    for t in registered_tools:
-        print(f"  - {t}")
+    print(f"监听端口: {port} ({'SSE' if transport == 'sse' else 'STDIO'})")
     print("==============================")
-    MCP.run() 
+
+    if transport == "sse":
+        from mcp.server.sse import SseServerTransport
+        from starlette.applications import Starlette
+        from starlette.responses import Response
+        from starlette.routing import Mount, Route
+        import uvicorn
+
+        sse = SseServerTransport("/messages/")
+
+        async def handle_sse(request):
+            async with sse.connect_sse(
+                request.scope, request.receive, request._send
+            ) as streams:
+                await mcp._mcp_server.run(
+                    streams[0], streams[1], mcp._mcp_server.create_initialization_options(),
+                )
+            return Response()
+
+        starlette_app = Starlette(
+            debug=True,
+            routes=[
+                Route("/sse", endpoint=handle_sse, methods=["GET", "POST"]),
+                Mount("/messages/", app=sse.handle_post_message),
+            ],
+        )
+
+        uvicorn.run(starlette_app, host="0.0.0.0", port=port)
+    else:
+        from mcp.server.stdio import stdio_server
+
+        async def arun():
+            async with stdio_server() as streams:
+                await mcp.run(
+                    streams[0], streams[1], {}
+                )
+
+        anyio.run(arun)
+
+    return 0
+
+if __name__ == "__main__":
+    main() 

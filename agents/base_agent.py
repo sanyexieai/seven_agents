@@ -22,7 +22,8 @@ from langchain.schema.runnable import RunnablePassthrough
 
 # 配置和工具
 from config.settings import get_settings
-from tools.mcp_tools import get_all_mcp_tools, get_all_mcp_tool_descriptions
+from tools.mcp_tools import list_mcp_tools
+# 删除 get_all_mcp_tools, get_all_mcp_tool_descriptions 的导入
 
 class BaseAgent(ABC):
     """
@@ -157,56 +158,25 @@ class BaseAgent(ABC):
         self.logger.info(f"记忆系统初始化: {memory_type}")
         return memory
     
-    def _setup_tools(self) -> List[BaseTool]:
-        """设置工具列表"""
-        tools = []
-        function_tools = []
-        # 添加默认工具
-        default_tools = self.extra_config.get('tools', [])
-        for tool_config in default_tools:
-            try:
-                tool = self._create_tool(tool_config)
-                if tool:
-                    tools.append(tool)
-                    # 判断是否为function tool（用@tool装饰的）
-                    if hasattr(tool, "args") and hasattr(tool, "__call__"):
-                        function_tools.append(tool)
-            except Exception as e:
-                self.logger.error(f"工具创建失败 {tool_config}: {e}")
-        # 自动加载 MCP 工具
+    def _setup_tools(self) -> list:
+        """从远程MCP服务加载所有工具schema，作为本地tools列表"""
         try:
-            mcp_tools = get_all_mcp_tools()
-            tools.extend(mcp_tools)
-            self.logger.info(f"工具初始化完成: {len(tools)} 个工具（含MCP）")
+            schemas = list_mcp_tools()
+            self.logger.info(f"远程MCP服务加载到 {len(schemas)} 个工具")
+            return schemas
         except Exception as e:
-            self.logger.error(f"MCP工具加载失败: {e}")
-        self._function_tools = function_tools
-        return tools
+            self.logger.error(f"远程MCP工具加载失败: {e}")
+            return []
 
     def get_all_tool_schemas(self):
-        """获取所有MCP工具的schema/描述，便于LLM参数补全和工具选择"""
-        return get_all_mcp_tool_descriptions()
+        """获取所有MCP工具的schema/描述，便于LLM参数补全和工具选择（如需可远程调用MCP服务获取）"""
+        # 可根据需要实现远程schema获取
+        return self.tools
 
     def call_tool_by_name(self, tool_name, params):
-        """统一调用MCP工具，自动适配多方法风格"""
-        from tools.mcp_tools import mcp_tool_manager
-        tool = mcp_tool_manager.tools.get(tool_name)
-        if not tool:
-            raise ValueError(f"MCP工具未注册: {tool_name}")
-        # 判断是否为多方法风格
-        if hasattr(tool, "get_methods"):
-            methods = tool.get_methods()
-            if len(methods) > 1:
-                if "method" not in params:
-                    raise ValueError(f"MCP多方法工具 '{tool_name}' 必须传 method 字段，可选: {list(methods.keys())}")
-            return tool.execute(**params)
-        # 单方法兼容
-        if hasattr(tool, "execute"):
-            return tool.execute(**params)
-        elif callable(tool):
-            return tool(**params)
-        else:
-            raise TypeError(f"工具 {tool_name} 不可调用，实际类型: {type(tool)}，属性: {dir(tool)}")
+        """统一调用MCP工具，直接用方法名和参数，不拼接类名前缀，也不传method字段"""
+        from tools.mcp_tools import call_mcp_tool
+        return call_mcp_tool(tool_name, params)
     
     def _create_tool(self, tool_config: Dict[str, Any]) -> Optional[BaseTool]:
         """创建工具实例"""

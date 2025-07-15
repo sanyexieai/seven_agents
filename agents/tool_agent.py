@@ -1,5 +1,5 @@
 from agents.base_agent import BaseAgent
-from tools.mcp_tools import get_all_mcp_tool_descriptions, call_mcp_tool
+from tools.mcp_tools import call_mcp_tool
 import json
 import os
 from agents.utils.register import register_agent
@@ -28,12 +28,11 @@ class ToolAgent(BaseAgent):
         if not tool_call or "tool_name" not in tool_call or "params" not in tool_call:
             return f"LLM参数解析失败: {tool_call}\n原始LLM输出: {tool_call}"
         tool_name = tool_call["tool_name"]
-        method = tool_call.get("method")
         params = tool_call.get("params", {})
-        print(f"tool_name: {tool_name}, method: {method}, params: {params}")
+        print(f"tool_name: {tool_name}, params: {params}")
         # 4. 调用MCP工具
         try:
-            result = call_mcp_tool(tool_name, params, method=method)
+            result = call_mcp_tool(tool_name, params)
             return result
         except Exception as e:
             return f"MCP工具调用失败: {e}"

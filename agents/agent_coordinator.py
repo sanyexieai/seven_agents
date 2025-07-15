@@ -45,13 +45,13 @@ class AgentCoordinatorAgent(BaseAgent):
         if not agent_call or "agent_name" not in agent_call:
             return f"LLM未能正确选择智能体: {agent_call}"
         agent_name = agent_call["agent_name"]
-        params = agent_call.get("params", {})
+        # params = agent_call.get("params", {})
         # 2. 动态实例化并调用被选中智能体
         agent = get_agent_by_name(agent_name)
         if not agent:
             return f"未找到名为 {agent_name} 的智能体"
         try:
-            result = agent.run(user_query, **params)
+            result = agent.run(user_query)
             return result
         except Exception as e:
             return f"被选中智能体调用失败: {e}" 
