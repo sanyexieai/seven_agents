@@ -79,3 +79,14 @@ sqlalchemy>=2.0.0
 
 pgvector>=0.2.4
 psycopg2>=2.9.0
+
+# 基础依赖
+SQLAlchemy>=1.4
+requests
+
+# 官方MCP协议及SDK
+modelcontextprotocol
+
+# 其他依赖
+transformers  # 如需RAG/向量库等
+psycopg2-binary  # 如用PostgreSQL

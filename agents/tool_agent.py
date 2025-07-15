@@ -7,7 +7,7 @@ from agents.utils.register import register_agent
 @register_agent
 class ToolAgent(BaseAgent):
     def _get_agent_description(self) -> str:
-        return "工具智能体，能够根据用户需求自动选择最合适的MCP工具，补全参数并完成任务。"
+        return "工具智能体，能够根据用户需求自动选择最合适的MCP工具，找到最合适的工具名和方法名，补全参数并完成任务。"
 
     def _load_prompt(self, prompt_name):
         prompt_path = os.path.join(os.path.dirname(__file__), 'prompt', 'tool_agent', f'{prompt_name}.txt')
@@ -28,10 +28,12 @@ class ToolAgent(BaseAgent):
         if not tool_call or "tool_name" not in tool_call or "params" not in tool_call:
             return f"LLM参数解析失败: {tool_call}\n原始LLM输出: {tool_call}"
         tool_name = tool_call["tool_name"]
-        params = tool_call["params"]
+        method = tool_call.get("method")
+        params = tool_call.get("params", {})
+        print(f"tool_name: {tool_name}, method: {method}, params: {params}")
         # 4. 调用MCP工具
         try:
-            result = call_mcp_tool(tool_name, params)
+            result = call_mcp_tool(tool_name, params, method=method)
             return result
         except Exception as e:
             return f"MCP工具调用失败: {e}"

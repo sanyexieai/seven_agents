@@ -1,6 +1,6 @@
 from .base import MCPTool
 from datetime import datetime
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any
 import requests
 from bs4 import BeautifulSoup
 import logging
@@ -9,7 +9,7 @@ class GoogleNewsSearchTool(MCPTool):
     def __init__(self):
         super().__init__(
             name="google_news_search",
-            description="Google新闻搜索，支持关键词、时间范围(可选)等参数。"
+            description="Google新闻搜索多方法MCP工具，支持关键词、时间范围等参数。"
         )
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
@@ -17,11 +17,48 @@ class GoogleNewsSearchTool(MCPTool):
             handler = logging.StreamHandler()
             handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
             self.logger.addHandler(handler)
+        self._methods = {
+            "search_news": {
+                "description": "Google新闻搜索",
+                "parameters": {
+                    "query": {"type": "string", "description": "搜索关键词"},
+                    "max_results": {"type": "integer", "default": 5},
+                    "start_date": {"type": "string", "description": "开始日期(YYYY-MM-DD)", "required": False},
+                    "end_date": {"type": "string", "description": "结束日期(YYYY-MM-DD)", "required": False}
+                }
+            }
+        }
 
-    def execute(self, query: str, max_results: int = 5, start_date: str = None, end_date: str = None) -> Dict[str, Any]:
-        """执行Google News搜索"""
-        self.logger.info(f"Google News搜索: {query}, max_results={max_results}, start={start_date}, end={end_date}")
-        # --- 使用web_search.py的_google_news_search逻辑 ---
+    def get_methods(self) -> Dict[str, Any]:
+        return self._methods
+
+    def get_schema(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "description": self.description,
+            "methods": self.get_methods()
+        }
+
+    def get_parameters(self) -> Dict[str, Any]:
+        return self.get_methods()
+
+    def execute(self, method: str, **kwargs):
+        if not method or method not in self._methods:
+            return f"不支持的方法: {method}"
+        try:
+            if method == "search_news":
+                return self.search_news(kwargs)
+            else:
+                return f"未知方法: {method}"
+        except Exception as e:
+            return f"Google News搜索失败: {e}"
+
+    def search_news(self, kwargs):
+        query = kwargs.get("query")
+        max_results = kwargs.get("max_results", 5)
+        start_date = kwargs.get("start_date")
+        end_date = kwargs.get("end_date")
+        # --- 以下为原有逻辑 ---
         tbs = ""
         if start_date and end_date:
             if "-" in start_date:
@@ -59,8 +96,8 @@ class GoogleNewsSearchTool(MCPTool):
             self.logger.info(f"搜索第 {page + 1} 页: {url}")
             try:
                 response = requests.get(url, headers=headers, timeout=15)
-                print("实际返回URL:", response.url)
-                print("部分HTML:", response.text[:1000])
+                self.logger.info(f"实际返回URL: {response.url}")
+                self.logger.debug(f"部分HTML: {response.text[:1000]}")
                 response.raise_for_status()
                 soup = BeautifulSoup(response.content, "html.parser")
             except Exception as e:
@@ -106,17 +143,4 @@ class GoogleNewsSearchTool(MCPTool):
             "query": query,
             "results": news_results[:max_results],
             "total_results": len(news_results)
-        }
-
-
-    def get_parameters(self) -> Dict[str, Any]:
-        return {
-            "type": "object",
-            "properties": {
-                "query": {"type": "string", "description": "搜索关键词"},
-                "max_results": {"type": "integer", "default": 5},
-                "start_date": {"type": "string", "description": "开始日期(YYYY-MM-DD)"},
-                "end_date": {"type": "string", "description": "结束日期(YYYY-MM-DD)"}
-            },
-            "required": ["query"]
         } 

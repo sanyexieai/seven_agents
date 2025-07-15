@@ -64,21 +64,31 @@ def get_all_mcp_tools():
     """
     return list(mcp_tool_manager.tools.values())
 
-def call_mcp_tool(tool_name, params):
+def call_mcp_tool(tool_name, params, method=None):
     """
-    统一调用MCP工具
+    统一调用MCP工具，自动适配多方法风格
     :param tool_name: 工具名称
     :param params: 参数dict
+    :param method: 多方法工具的方法名（可选，优先于params['method']）
     :return: 工具执行结果
     """
     tool = mcp_tool_manager.tools.get(tool_name)
     if not tool:
         raise ValueError(f"MCP工具未注册: {tool_name}")
-    # 调试输出工具类型和属性
-    print(f"[MCP调试] 工具名: {tool_name}, 类型: {type(tool)}, 属性: {dir(tool)}")
-    # 兼容本地和远程MCP工具
-    if hasattr(tool, "run") and callable(tool.run):
-        return tool.run(**params)
+    # 判断是否为多方法风格
+    if hasattr(tool, "get_methods"):
+        methods = tool.get_methods()
+        # 优先用显式method参数
+        if method is not None:
+            params = dict(params)
+            params["method"] = method
+        # 如果是多方法工具，且params里没有method，才报错
+        if len(methods) > 1 and "method" not in params:
+            raise ValueError(f"MCP多方法工具 '{tool_name}' 必须传 method 字段，可选: {list(methods.keys())}")
+        return tool.execute(**params)
+    # 单方法兼容
+    if hasattr(tool, "execute"):
+        return tool.execute(**params)
     elif callable(tool):
         return tool(**params)
     else:

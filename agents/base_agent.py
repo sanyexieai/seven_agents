@@ -22,7 +22,7 @@ from langchain.schema.runnable import RunnablePassthrough
 
 # 配置和工具
 from config.settings import get_settings
-from tools.mcp_tools import get_all_mcp_tools, get_all_mcp_tool_descriptions, call_mcp_tool
+from tools.mcp_tools import get_all_mcp_tools, get_all_mcp_tool_descriptions
 
 class BaseAgent(ABC):
     """
@@ -188,8 +188,25 @@ class BaseAgent(ABC):
         return get_all_mcp_tool_descriptions()
 
     def call_tool_by_name(self, tool_name, params):
-        """统一调用MCP工具"""
-        return call_mcp_tool(tool_name, params)
+        """统一调用MCP工具，自动适配多方法风格"""
+        from tools.mcp_tools import mcp_tool_manager
+        tool = mcp_tool_manager.tools.get(tool_name)
+        if not tool:
+            raise ValueError(f"MCP工具未注册: {tool_name}")
+        # 判断是否为多方法风格
+        if hasattr(tool, "get_methods"):
+            methods = tool.get_methods()
+            if len(methods) > 1:
+                if "method" not in params:
+                    raise ValueError(f"MCP多方法工具 '{tool_name}' 必须传 method 字段，可选: {list(methods.keys())}")
+            return tool.execute(**params)
+        # 单方法兼容
+        if hasattr(tool, "execute"):
+            return tool.execute(**params)
+        elif callable(tool):
+            return tool(**params)
+        else:
+            raise TypeError(f"工具 {tool_name} 不可调用，实际类型: {type(tool)}，属性: {dir(tool)}")
     
     def _create_tool(self, tool_config: Dict[str, Any]) -> Optional[BaseTool]:
         """创建工具实例"""

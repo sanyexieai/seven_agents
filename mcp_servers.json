@@ -8,6 +8,10 @@
     "FileOperationTool": {
       "module": "tools.mcp.file_operation",
       "class": "FileOperationTool"
+    },
+    "DatabaseOperationTool": {
+      "module": "tools.mcp.database_operation",
+      "class": "DatabaseOperationTool"
     }
   }
 } 
