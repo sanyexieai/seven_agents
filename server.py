@@ -21,8 +21,6 @@ import tools.mcp.database_operation
 def main(port: int, transport: str) -> int:
     print("==============================")
     print("MCP服务即将启动！")
-    print("服务名称: AllToolsDemo")
-    print(f"监听端口: {port} ({'SSE' if transport == 'sse' else 'STDIO'})")
     print("==============================")
 
     if transport == "sse":
@@ -53,15 +51,8 @@ def main(port: int, transport: str) -> int:
 
         uvicorn.run(starlette_app, host="0.0.0.0", port=port)
     else:
-        from mcp.server.stdio import stdio_server
-
-        async def arun():
-            async with stdio_server() as streams:
-                await mcp.run(
-                    streams[0], streams[1], {}
-                )
-
-        anyio.run(arun)
+        # STDIO模式直接用FastMCP同步run方法
+        mcp.run("stdio")
 
     return 0
 

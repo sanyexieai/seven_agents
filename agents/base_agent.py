@@ -49,7 +49,6 @@ class BaseAgent(ABC):
         # LangChain组件
         self.llm = self._setup_llm()
         self.memory = self._setup_memory()
-        self.tools = self._setup_tools()
         self.prompt = self._setup_prompt()
         self.chain = self._setup_chain()
         self.agent = self._setup_agent()
@@ -158,8 +157,8 @@ class BaseAgent(ABC):
         self.logger.info(f"记忆系统初始化: {memory_type}")
         return memory
     
-    def _setup_tools(self) -> list:
-        """从远程MCP服务加载所有工具schema，作为本地tools列表"""
+    def get_all_tool_schemas(self):
+        """获取所有MCP工具的schema/描述，便于LLM参数补全和工具选择（如需可远程调用MCP服务获取）"""
         try:
             schemas = list_mcp_tools()
             self.logger.info(f"远程MCP服务加载到 {len(schemas)} 个工具")
@@ -167,11 +166,6 @@ class BaseAgent(ABC):
         except Exception as e:
             self.logger.error(f"远程MCP工具加载失败: {e}")
             return []
-
-    def get_all_tool_schemas(self):
-        """获取所有MCP工具的schema/描述，便于LLM参数补全和工具选择（如需可远程调用MCP服务获取）"""
-        # 可根据需要实现远程schema获取
-        return self.tools
 
     def call_tool_by_name(self, tool_name, params):
         """统一调用MCP工具，直接用方法名和参数，不拼接类名前缀，也不传method字段"""
