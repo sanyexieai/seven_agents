@@ -1,11 +1,8 @@
 {
   "mcpServers": {
-    "AllToolsDemoSTDIO": {
-      "command": "d:/code/ai/seven_agents/.conda/python.exe",
-      "args": ["D:/code/ai/seven_agents/server.py", "--transport", "stdio"],
-      "env": {
-        "PYTHONIOENCODING": "utf-8"
-      }
+    "AllToolsDemoSSE": {
+      "url": "http://localhost:8080/sse",
+      "transport_type": "sse"
     }
   }
 }

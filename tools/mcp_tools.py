@@ -38,10 +38,27 @@ class Server:
     def __init__(self, name: str, config: dict) -> None:
         self.name = name
         self.config = config
-        self.session: Optional[ClientSession] = None
+        self.session: Optional[Any] = None
         self.exit_stack: AsyncExitStack = AsyncExitStack()
+        self.is_http = bool(config.get("url"))
+        self.url = config.get("url")
+        self.transport_type = config.get("transport_type", "streamable_http")
 
     async def initialize(self) -> None:
+        if self.is_http:
+            from mcp.client.streamable_http import streamablehttp_client
+            from mcp.client.sse import sse_client
+            if self.transport_type == "sse":
+                client_ctx = sse_client(url=self.url)
+                read_stream, write_stream = await self.exit_stack.enter_async_context(client_ctx)
+            else:
+                client_ctx = streamablehttp_client(url=self.url)
+                read_stream, write_stream, _ = await self.exit_stack.enter_async_context(client_ctx)
+            session = await self.exit_stack.enter_async_context(ClientSession(read_stream, write_stream))
+            await session.initialize()
+            self.session = session
+            return
+        # STDIO 原有逻辑
         command = shutil.which("npx") if self.config.get("command") == "npx" else self.config.get("command")
         if not command:
             raise ValueError("The command must be a valid string and cannot be None.")
@@ -50,7 +67,6 @@ class Server:
         cwd = self.config.get("cwd", None)
         encoding = self.config.get("encoding", "utf-8")
         encoding_error_handler = self.config.get("encoding_error_handler", "strict")
-        # 其余参数可按需补全
         from collections import namedtuple
         StdioParams = namedtuple('StdioParams', [
             'command', 'args', 'env', 'cwd', 'encoding', 'encoding_error_handler'

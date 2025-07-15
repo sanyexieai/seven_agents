@@ -1,17 +1,22 @@
 {
-  "mcpServers": {},
-  "localTools": {
-    "GoogleNewsSearchTool": {
-      "module": "tools.mcp.google_news_search",
-      "class": "GoogleNewsSearchTool"
-    },
-    "FileOperationTool": {
-      "module": "tools.mcp.file_operation",
-      "class": "FileOperationTool"
-    },
-    "DatabaseOperationTool": {
-      "module": "tools.mcp.database_operation",
-      "class": "DatabaseOperationTool"
+  "mcpServers": {
+    "AllToolsDemoSTDIO": {
+      "command": "d:/code/ai/seven_agents/.conda/python.exe",
+      "args": ["D:/code/ai/seven_agents/server.py", "--transport", "stdio"],
+      "env": {
+        "PYTHONIOENCODING": "utf-8"
+      }
     }
   }
-} 
+}
+
+
+
+{
+  "mcpServers": {
+    "AllToolsDemoSSE": {
+      "url": "http://localhost:8080/sse",
+      "transport_type": "sse"
+    }
+  }
+}
