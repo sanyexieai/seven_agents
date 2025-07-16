@@ -13,7 +13,7 @@ class MetaAgent:
     def __init__(self, auto_register_all=False):
         self.registry = {}  # 所有智能体/工会/工具的注册表
         self.tool_collective = ToolCollective()  # 全局唯一工具智能体
-        self.register("ToolCollective", self.tool_collective)
+        self.context = {}   # 全局上下文
         if auto_register_all:
             self.auto_register_all()
 

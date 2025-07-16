@@ -402,6 +402,11 @@ class BaseAgent(ABC):
         """获取智能体描述，子类必须实现"""
         pass
     
+    @abstractmethod
+    def handle_task(self, params):
+        """处理单个任务，所有子类必须实现"""
+        pass
+    
     def __str__(self) -> str:
         return f"{self.__class__.__name__}(name='{self.name}')"
     

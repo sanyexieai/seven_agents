@@ -5,7 +5,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from agents.meta_agent import MetaAgent
 from agents.task_incubator import TaskIncubator
 from agents.orchestrator import Orchestrator
-from agents.tool_agent import ToolCollective
 from agents.guilds.data_crawl_guild import DataCrawlGuild
 from agents.guilds.knowledge_guild import KnowledgeGuild
 from agents.guilds.chart_guild import ChartGuild
@@ -17,11 +16,6 @@ from agents.guilds.report_guild import ReportGuild
 if __name__ == "__main__":
     # 1. 初始化元治理智能体
     meta = MetaAgent(auto_register_all=True)
-
-    # 2. 注册 ToolCollective（由 MetaAgent 持有）
-    tool_collective = ToolCollective(meta)
-    meta.register("ToolCollective", tool_collective)
-
     # 3. 注册各 Guild/Agent，全部传入 meta
     meta.register("DataCrawlGuild", DataCrawlGuild(meta))
     meta.register("KnowledgeGuild", KnowledgeGuild(meta))
@@ -38,7 +32,7 @@ if __name__ == "__main__":
     meta.register("Orchestrator", orchestrator)
 
     # 5. 用户输入
-    user_input = "以商汤科技为关键词，搜索相关新闻"
+    user_input = "以商汤科技为关键词，搜索相关新闻,整理一份研报，并生成图表，以markdown格式保存到output目录下，不需要操作数据库"
     print(f"用户输入: {user_input}")
 
     # 6. 任务孵化

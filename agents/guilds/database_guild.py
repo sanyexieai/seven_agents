@@ -10,6 +10,6 @@ class DatabaseGuild(BaseAgent):
     def _get_agent_description(self):
         return "负责数据库相关业务推理与工具调用。"
 
-    def handle_task(self, task):
+    def handle_task(self, task, context=None):
         tool_collective = self.meta_agent.get_tool_collective()
         return tool_collective.handle_tool_request({"目标": "数据库操作", **task}) 

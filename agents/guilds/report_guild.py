@@ -13,6 +13,7 @@ class ReportGuild(BaseAgent):
     def handle_task(self, params, context=None):
         tool_collective = self.meta_agent.get_tool_collective()
         all_tools = self.meta_agent.get_all_tools()
+        # 可通过 self.meta_agent.context 访问全局上下文
         candidate_tools = [t for t in all_tools if any(kw in t.get("description", "") for kw in ["研报", "章节", "格式化", "整合", "输出", "report"])]
         results = []
         for tool in candidate_tools:

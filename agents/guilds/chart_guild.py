@@ -10,9 +10,10 @@ class ChartGuild(BaseAgent):
     def _get_agent_description(self):
         return "负责图表生成与数据可视化任务，具备多渠道整合与来源可靠性评估能力。"
 
-    def handle_task(self, params, context=None):
+    def handle_task(self, params):
         tool_collective = self.meta_agent.get_tool_collective()
         all_tools = self.meta_agent.get_all_tools()
+        # 可通过 self.meta_agent.context 访问全局上下文
         candidate_tools = [t for t in all_tools if any(kw in t.get("description", "") for kw in ["图表", "可视化", "数据展示", "chart", "visualization"])]
         results = []
         for tool in candidate_tools:

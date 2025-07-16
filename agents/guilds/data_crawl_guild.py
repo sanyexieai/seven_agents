@@ -10,9 +10,10 @@ class DataCrawlGuild(BaseAgent):
     def _get_agent_description(self):
         return "负责新闻、财报等数据抓取任务，具备多渠道数据整合与来源可靠性评估能力。"
 
-    def handle_task(self, params, context=None):
+    def handle_task(self, params):
         tool_collective = self.meta_agent.get_tool_collective()
         all_tools = self.meta_agent.get_all_tools()
+        # 可通过 self.meta_agent.context 访问全局上下文
         # 1. 专家式思考：筛选所有可用于数据抓取的工具
         candidate_tools = [t for t in all_tools if any(kw in t.get("description", "") for kw in ["新闻", "数据抓取", "资讯", "爬虫", "财报"])]
         results = []

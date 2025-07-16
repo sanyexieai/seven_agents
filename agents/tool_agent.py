@@ -2,9 +2,7 @@ from agents.base_agent import BaseAgent
 from tools.mcp_tools import call_mcp_tool, list_mcp_tools
 import json
 import os
-from agents.utils.register import register_agent
 
-@register_agent
 class ToolCollective(BaseAgent):
     def __init__(self, name="ToolCollective"):
         super().__init__(name=name)
@@ -55,6 +53,12 @@ class ToolCollective(BaseAgent):
         else:
             # 6. 不需要工具，直接用 LLM 回复
             return self._llm_reply(task)
+
+    def handle_task(self, params):
+        """
+        兼容多智能体统一接口，直接调用 handle_tool_request
+        """
+        return self.handle_tool_request(params)
 
     def _need_tool(self, task):
         """

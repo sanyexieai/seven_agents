@@ -24,4 +24,10 @@ class TaskIncubator(BaseAgent):
         if not result or 'tasks' not in result:
             # 回退到简单模式
             return {"tasks": [user_input]}
-        return result 
+        return result
+
+    def handle_task(self, params):
+        """
+        任务孵化器不直接处理业务任务，仅做兜底，防止抽象类报错。
+        """
+        return "TaskIncubator 不支持直接处理任务。" 

@@ -10,9 +10,10 @@ class KnowledgeGuild(BaseAgent):
     def _get_agent_description(self):
         return "负责法规、合规、行业知识检索任务，具备多渠道知识整合与来源可靠性评估能力。"
 
-    def handle_task(self, params, context=None):
+    def handle_task(self, params):
         tool_collective = self.meta_agent.get_tool_collective()
         all_tools = self.meta_agent.get_all_tools()
+        # 可通过 self.meta_agent.context 访问全局上下文
         candidate_tools = [t for t in all_tools if any(kw in t.get("description", "") for kw in ["知识", "法规", "合规", "政策", "标准", "检索", "百科"])]
         results = []
         for tool in candidate_tools:
