@@ -1,0 +1,13 @@
+{
+  "ToolCollective": "ToolCollective",
+  "DatabaseGuild": "DatabaseGuild",
+  "DataCrawlGuild": "DataCrawlGuild",
+  "KnowledgeGuild": "KnowledgeGuild",
+  "ChartGuild": "ChartGuild",
+  "FinanceGuild": "FinanceGuild",
+  "IndustryGuild": "IndustryGuild",
+  "AuditGuild": "AuditGuild",
+  "ReportGuild": "ReportGuild",
+  "TaskIncubator": "TaskIncubator",
+  "Orchestrator": "Orchestrator"
+}

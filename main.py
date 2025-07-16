@@ -6,6 +6,11 @@ import subprocess
 from agents.orchestrator import AgentOrchestrator
 from database.db_sync import db_sync
 from config.settings import ENVIRONMENT, DATABASE_SYNC_MODE
+from agents.meta_agent import MetaAgent
+from agents.task_incubator import TaskIncubator
+from agents.orchestrator import Orchestrator
+from agents.guilds.database_guild import DatabaseGuild
+from agents.tool_agent import ToolCollective
 
 def run_alembic_upgrade():
     """自动执行 Alembic 数据库迁移到最新版本。"""
@@ -36,6 +41,30 @@ def sync_database_structure():
     else:
         print(f"未知的同步模式: {DATABASE_SYNC_MODE}，使用默认的SQLAlchemy自动同步")
         db_sync.sync_database()
+
+# 1. 初始化各智能体
+meta = MetaAgent()
+tool_collective = ToolCollective()
+db_guild = DatabaseGuild(tool_collective)
+incubator = TaskIncubator()
+orchestrator = Orchestrator(meta)
+
+# 2. 注册到元治理
+meta.register("ToolCollective", tool_collective)
+meta.register("DatabaseGuild", db_guild)
+meta.register("TaskIncubator", incubator)
+meta.register("Orchestrator", orchestrator)
+
+# 3. 用户输入
+user_input = "查询 test_table 所有数据"
+
+# 4. 任务孵化
+task_blueprint = incubator.incubate(user_input)
+
+# 5. 调度分发
+result = orchestrator.dispatch(task_blueprint)
+
+print("最终结果：", result)
 
 if __name__ == '__main__':
     # 根据环境变量同步数据库结构

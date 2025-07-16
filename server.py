@@ -33,12 +33,15 @@ def main(port: int, transport: str) -> int:
         sse = SseServerTransport("/messages/")
 
         async def handle_sse(request):
-            async with sse.connect_sse(
-                request.scope, request.receive, request._send
-            ) as streams:
-                await mcp._mcp_server.run(
-                    streams[0], streams[1], mcp._mcp_server.create_initialization_options(),
-                )
+            try:
+                async with sse.connect_sse(
+                    request.scope, request.receive, request._send
+                ) as streams:
+                    await mcp._mcp_server.run(
+                        streams[0], streams[1], mcp._mcp_server.create_initialization_options(),
+                    )
+            except (GeneratorExit, RuntimeError) as e:
+                print(f'[SSE] 流关闭异常: {e}')
             return Response()
 
         starlette_app = Starlette(

@@ -171,16 +171,23 @@ def get_server(server_name: Optional[str] = None) -> Server:
 
 async def list_mcp_tools_async(server_name=None):
     server = get_server(server_name)
-    await server.initialize()
-    tools = await server.list_tools()
-    return [
-        {
-            "name": t.get("name"),
-            "description": t.get("description"),
-            "inputSchema": t.get("inputSchema"),
-            "title": t.get("title")
-        } for t in tools
-    ]
+    try:
+        await server.initialize()
+        tools = await server.list_tools()
+        return [
+            {
+                "name": t.get("name"),
+                "description": t.get("description"),
+                "inputSchema": t.get("inputSchema"),
+                "title": t.get("title")
+            } for t in tools
+        ]
+    except (GeneratorExit, RuntimeError) as e:
+        logging.error(f"[MCP工具] 流关闭异常: {e}")
+        return []
+    except Exception as e:
+        logging.error(f"[MCP工具] 工具列表获取异常: {e}")
+        return []
 
 def list_mcp_tools(server_name=None):
     return asyncio.run(list_mcp_tools_async(server_name))
@@ -208,8 +215,15 @@ def format_tool_schema(tool: dict) -> str:
 
 async def call_mcp_tool_async(tool_name, params, server_name=None, **kwargs):
     server = get_server(server_name)
-    await server.initialize()
-    return await server.execute_tool(tool_name, params, **kwargs)
+    try:
+        await server.initialize()
+        return await server.execute_tool(tool_name, params, **kwargs)
+    except (GeneratorExit, RuntimeError) as e:
+        logging.error(f"[MCP工具] 流关闭异常: {e}")
+        return None
+    except Exception as e:
+        logging.error(f"[MCP工具] 工具调用异常: {e}")
+        return None
 
 def call_mcp_tool(tool_name, params, server_name=None, **kwargs):
     return asyncio.run(call_mcp_tool_async(tool_name, params, server_name, **kwargs))

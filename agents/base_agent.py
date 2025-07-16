@@ -38,47 +38,58 @@ class BaseAgent(ABC):
     - 日志记录
     """
     
-    def __init__(self, name: str, **kwargs):
+    def __init__(self, name, **kwargs):
         self.name = name
         self.extra_config = kwargs
-        
-        # 初始化设置
-        self.settings = get_settings()
+        self._llm = None
+        self._memory = None
+        self._prompt = None
+        self._chain = None
+        self._agent = None
         self.logger = self._setup_logger()
-        
-        # LangChain组件
-        self.llm = self._setup_llm()
-        self.memory = self._setup_memory()
-        self.prompt = self._setup_prompt()
-        self.chain = self._setup_chain()
-        self.agent = self._setup_agent()
-        
-        # 状态管理
-        self.conversation_history = []
-        self.task_history = []
-        self.doc_meta = {
-            "created_at": datetime.now().isoformat(),
-            "agent_type": self.__class__.__name__,
-            "version": "1.0.0"
-        }
-        
         self.logger.info(f"智能体 '{self.name}' 初始化完成")
-    
-    def _setup_logger(self) -> logging.Logger:
-        """设置日志记录器"""
+
+    def _setup_logger(self):
+        import logging
         logger = logging.getLogger(f"agent.{self.name}")
         logger.setLevel(logging.INFO)
-        
         if not logger.handlers:
             handler = logging.StreamHandler()
-            formatter = logging.Formatter(
-                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-            )
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             handler.setFormatter(formatter)
             logger.addHandler(handler)
-        
         return logger
-    
+
+    @property
+    def llm(self):
+        if self._llm is None:
+            self._llm = self._setup_llm()
+        return self._llm
+
+    @property
+    def memory(self):
+        if self._memory is None:
+            self._memory = self._setup_memory()
+        return self._memory
+
+    @property
+    def prompt(self):
+        if self._prompt is None:
+            self._prompt = self._setup_prompt()
+        return self._prompt
+
+    @property
+    def chain(self):
+        if self._chain is None:
+            self._chain = self._setup_chain()
+        return self._chain
+
+    @property
+    def agent(self):
+        if self._agent is None:
+            self._agent = self._setup_agent()
+        return self._agent
+
     def _setup_llm(self):
         """设置语言模型"""
         try:
@@ -139,7 +150,7 @@ class BaseAgent(ABC):
         
         return FallbackLLM()
     
-    def _setup_memory(self) -> ConversationBufferMemory:
+    def _setup_memory(self):
         """设置对话记忆"""
         memory_type = self.extra_config.get('memory_type', 'buffer')
         
@@ -216,7 +227,7 @@ class BaseAgent(ABC):
         with open(prompt_path, 'r', encoding='utf-8') as f:
             return f.read()
 
-    def _setup_prompt(self) -> ChatPromptTemplate:
+    def _setup_prompt(self):
         """设置提示词模板"""
         # 加载系统提示词模板
         system_template = self._load_base_prompt('system')
@@ -234,7 +245,7 @@ class BaseAgent(ABC):
         self.logger.info("提示词模板设置完成")
         return prompt
     
-    def _setup_chain(self) -> LLMChain:
+    def _setup_chain(self):
         """设置LLM链"""
         chain = LLMChain(
             llm=self.llm,
@@ -246,7 +257,7 @@ class BaseAgent(ABC):
         self.logger.info("LLM链设置完成")
         return chain
     
-    def _setup_agent(self) -> Optional[AgentExecutor]:
+    def _setup_agent(self):
         """设置智能体执行器"""
         # 只用function tool时才用function agent，否则不用
         if hasattr(self, '_function_tools') and self._function_tools:

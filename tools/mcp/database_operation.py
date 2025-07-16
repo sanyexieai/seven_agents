@@ -46,7 +46,11 @@ async def database_execute_sql(sql: str, params: dict = None):
         result = session.execute(text(sql), params or {})
         if sql.strip().lower().startswith("select"):
             rows = result.fetchall()
-            return [dict(row) for row in rows]
+            # 兼容不同SQLAlchemy版本
+            try:
+                return [dict(row._mapping) for row in rows]
+            except Exception:
+                return [dict(row) for row in rows]
         else:
             session.commit()
             return {"success": True, "rowcount": result.rowcount}
