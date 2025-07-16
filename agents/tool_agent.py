@@ -1,5 +1,5 @@
 from agents.base_agent import BaseAgent
-from tools.mcp_tools import call_mcp_tool
+from tools.mcp_tools import call_mcp_tool, list_mcp_tools
 import json
 import os
 from agents.utils.register import register_agent
@@ -8,9 +8,22 @@ from agents.utils.register import register_agent
 class ToolCollective(BaseAgent):
     def __init__(self, name="ToolCollective"):
         super().__init__(name=name)
+        self._tool_schemas_cache = None
 
     def _get_agent_description(self):
         return "工具自治体，负责所有外部工具的注册、参数补全、调用和结果校验。"
+
+    def get_all_tool_schemas(self, force_reload=False):
+        if self._tool_schemas_cache is not None and not force_reload:
+            return self._tool_schemas_cache
+        try:
+            schemas = list_mcp_tools()
+            self.logger.info(f"远程MCP服务加载到 {len(schemas)} 个工具")
+            self._tool_schemas_cache = schemas
+            return schemas
+        except Exception as e:
+            self.logger.error(f"远程MCP工具加载失败: {e}")
+            return []
 
     def handle_tool_request(self, task):
         """

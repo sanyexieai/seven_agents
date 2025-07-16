@@ -8,8 +8,34 @@ class KnowledgeGuild(BaseAgent):
         self.meta_agent = meta_agent
 
     def _get_agent_description(self):
-        return "负责法规、合规、行业知识检索任务"
+        return "负责法规、合规、行业知识检索任务，具备多渠道知识整合与来源可靠性评估能力。"
 
-    def handle_task(self, params):
+    def handle_task(self, params, context=None):
         tool_collective = self.meta_agent.get_tool_collective()
-        return tool_collective.handle_tool_request({"目标": "知识检索", **params}) 
+        all_tools = self.meta_agent.get_all_tools()
+        candidate_tools = [t for t in all_tools if any(kw in t.get("description", "") for kw in ["知识", "法规", "合规", "政策", "标准", "检索", "百科"])]
+        results = []
+        for tool in candidate_tools:
+            try:
+                data = tool_collective.handle_tool_request({"目标": params.get("目标", "知识检索"), **params, "tool": tool["name"]})
+                reliability = self.evaluate_source_reliability(tool["name"], tool.get("description", ""))
+                results.append({"data": data, "source": tool["name"], "reliability": reliability})
+            except Exception as e:
+                results.append({"data": None, "source": tool["name"], "reliability": 0, "error": str(e)})
+        unique = {}
+        for r in results:
+            key = str(r["data"])
+            if key not in unique or r["reliability"] > unique[key]["reliability"]:
+                unique[key] = r
+        sorted_results = sorted(unique.values(), key=lambda x: x["reliability"], reverse=True)
+        return sorted_results
+
+    def evaluate_source_reliability(self, source_name, description):
+        if any(kw in source_name+description for kw in ["官方", "authority", "政府", "标准"]):
+            return 0.95
+        elif any(kw in source_name+description for kw in ["主流", "mainstream", "百科", "知网", "维基"]):
+            return 0.85
+        elif any(kw in source_name+description for kw in ["自媒体", "博客", "论坛", "贴吧"]):
+            return 0.6
+        else:
+            return 0.7 

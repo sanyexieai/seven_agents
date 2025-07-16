@@ -19,27 +19,37 @@ class Orchestrator(BaseAgent):
         return re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
 
     def dispatch(self, task_blueprint):
-        task = task_blueprint["tasks"][0]
-        intent = task["intent"] if isinstance(task, dict) and "intent" in task else None
-        if intent:
-            if '_' in intent:
-                class_name = self._snake_to_camel(intent)
-                file_name = intent.lower()
+        results = []
+        context = {}
+        for idx, task in enumerate(task_blueprint["tasks"]):
+            intent = task["intent"] if isinstance(task, dict) and "intent" in task else None
+            if intent:
+                if '_' in intent:
+                    class_name = self._snake_to_camel(intent)
+                    file_name = intent.lower()
+                else:
+                    class_name = intent
+                    file_name = self._camel_to_snake(intent)
+                guild_name = class_name
             else:
-                class_name = intent
-                file_name = self._camel_to_snake(intent)
-            guild_name = class_name
-        else:
-            guild_name = class_name = "DatabaseGuild"
-            file_name = "database_guild"
-        guild = self.meta_agent.registry.get(guild_name)
-        if not guild:
+                guild_name = class_name = "DatabaseGuild"
+                file_name = "database_guild"
+            guild = self.meta_agent.registry.get(guild_name)
+            if not guild:
+                try:
+                    module = importlib.import_module(f"agents.guilds.{file_name}")
+                    guild_class = getattr(module, class_name)
+                    guild = guild_class(self.meta_agent)
+                    self.meta_agent.register(guild_name, guild)
+                except Exception as e:
+                    results.append({"task": task, "error": f"无法自动创建工会 {guild_name}: {e}"})
+                    continue
             try:
-                module = importlib.import_module(f"agents.guilds.{file_name}")
-                guild_class = getattr(module, class_name)
-                tool_collective = self.meta_agent.registry.get("ToolCollective")
-                guild = guild_class(tool_collective)
-                self.meta_agent.register(guild_name, guild)
+                # 传递 context 给 handle_task
+                result = guild.handle_task(task, context=context)
+                # 记录本步结果到 context
+                context[f"task_{idx}_result"] = result
+                results.append({"task": task, "result": result})
             except Exception as e:
-                raise RuntimeError(f"无法自动创建工会 {guild_name}: {e}")
-        return guild.handle_task(task) 
+                results.append({"task": task, "error": str(e)})
+        return results 

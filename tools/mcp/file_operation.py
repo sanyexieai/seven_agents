@@ -23,6 +23,7 @@ async def write_file(file_path: str, content: str):
     if not file_path:
         return {"success": False, "error": "缺少file_path参数"}
     try:
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(content)
         return {"success": True, "message": f"文件 {file_path} 写入成功"}
@@ -34,6 +35,7 @@ async def append_file(file_path: str, content: str):
     if not file_path:
         return {"success": False, "error": "缺少file_path参数"}
     try:
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
         with open(file_path, 'a', encoding='utf-8') as f:
             f.write(content)
         return {"success": True, "message": f"文件 {file_path} 追加成功"}
