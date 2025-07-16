@@ -42,7 +42,7 @@ class Server:
         self.exit_stack: AsyncExitStack = AsyncExitStack()
         self.is_http = bool(config.get("url"))
         self.url = config.get("url")
-        self.transport_type = config.get("transport_type", "streamable_http")
+        self.transport_type = config.get("transport_type", "sse")
 
     async def initialize(self) -> None:
         if self.is_http:
