@@ -16,6 +16,9 @@ from agents.guilds.report_guild import ReportGuild
 if __name__ == "__main__":
     # 1. 初始化元治理智能体
     meta = MetaAgent(auto_register_all=True)
+    tool_collective = meta.get_tool_collective()
+    print(tool_collective.get_all_tool_schemas())
+    tool_collective.handle_tool_request("在output目录下创建一个文件，文件名称为test.txt，文件内容为hello world");
     # 3. 注册各 Guild/Agent，全部传入 meta
     meta.register("DataCrawlGuild", DataCrawlGuild(meta))
     meta.register("KnowledgeGuild", KnowledgeGuild(meta))

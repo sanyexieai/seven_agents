@@ -33,6 +33,9 @@ class MetaAgent:
         """
         递归扫描 agents.guilds 及其所有子目录，自动注册所有 Guild。
         """
+        #1.注册工具智能体
+        self.register("ToolCollective", ToolCollective())
+        #2.注册所有工会
         guilds_root = os.path.join(os.path.dirname(__file__), "guilds")
         for root, dirs, files in os.walk(guilds_root):
             for file in files:
